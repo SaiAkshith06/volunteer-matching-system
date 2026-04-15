@@ -1,0 +1,88 @@
+import type { Volunteer, Need } from '../types';
+
+export const mockVolunteers: Volunteer[] = [
+  {
+    id: 'v1',
+    name: 'Alice Johnson',
+    skills: ['First Aid', 'Teaching'],
+    location: 'Downtown',
+    availability: 'Weekends',
+    rating: 4.5,
+    avatar: 'AJ',
+  },
+  {
+    id: 'v2',
+    name: 'Robert Smith',
+    skills: ['Logistics', 'Driving'],
+    location: 'Westside',
+    availability: 'Weekdays',
+    rating: 4.2,
+    avatar: 'RS',
+  },
+  {
+    id: 'v3',
+    name: 'Emily Davis',
+    skills: ['Counseling', 'First Aid'],
+    location: 'East',
+    availability: 'Evenings',
+    rating: 4.8,
+    avatar: 'ED',
+  },
+  {
+    id: 'v4',
+    name: 'Michael Wilson',
+    skills: ['Cooking'],
+    location: 'North',
+    availability: 'Mornings',
+    rating: 3.9,
+    avatar: 'MW',
+  },
+  {
+    id: 'v5',
+    name: 'Sarah Brown',
+    skills: ['IT Support'],
+    location: 'East',
+    availability: 'Flexible',
+    rating: 4.6,
+    avatar: 'SB',
+  },
+];
+
+export const mockNeeds: Need[] = [
+  {
+    id: 'n1',
+    title: 'Emergency Medical Supplies Delivery',
+    requiredSkills: ['First Aid', 'Driving'],
+    location: 'Downtown Clinic',
+    urgency: 'High',
+    dateAdded: '2 hours ago',
+    isAssigned: false,
+  },
+  {
+    id: 'n2',
+    title: 'Food Distribution at Shelter',
+    requiredSkills: ['Cooking', 'Logistics'],
+    location: 'Westside Shelter',
+    urgency: 'High',
+    dateAdded: '3 hours ago',
+    isAssigned: false,
+  },
+  {
+    id: 'n3',
+    title: 'Community Center Tech Setup',
+    requiredSkills: ['IT Support'],
+    location: 'East Community Center',
+    urgency: 'Medium',
+    dateAdded: 'Yesterday',
+    isAssigned: false,
+  },
+  {
+    id: 'n4',
+    title: 'Weekend Tutoring Program',
+    requiredSkills: ['Teaching'],
+    location: 'North High School',
+    urgency: 'Low',
+    dateAdded: '2 days ago',
+    isAssigned: false,
+  },
+];
