@@ -6,8 +6,19 @@ import MatchCard from './components/MatchCard';
 import CsvUpload from './components/CsvUpload';
 import EmptyState from './components/EmptyState';
 import ToastContainer from './components/ToastContainer';
+import InsightsPanel from './components/InsightsPanel';
+import DemoControls from './components/DemoControls';
+import ComparisonPanel from './components/ComparisonPanel';
 import { useVolunteerMatch } from './hooks/useVolunteerMatch';
 import { mockVolunteers, mockNeeds } from './data/mockData';
+import {
+  floodVolunteers,
+  floodNeeds,
+  educationVolunteers,
+  educationNeeds,
+  medicalVolunteers,
+  medicalNeeds,
+} from './data/demoScenarios';
 import {
   Users,
   Heart,
@@ -26,21 +37,50 @@ function App() {
     topMatches,
     isLoading,
     toasts,
+    coverageRate,
+    idleVolunteerCount,
+    urgentPendingCount,
     handleVolunteerCsvUpload,
     handleNeedsCsvUpload,
     handleAssign,
+    handleAutoAssign,
     handleExport,
+    handleLoadScenario,
+    handleReset,
     dismissToast,
   } = useVolunteerMatch(mockVolunteers, mockNeeds);
 
-
   const activeNeeds = needs.filter((n) => !n.isAssigned);
+
+  // ── Scenario loader callback ──────────────────────────────────────────────
+  const loadScenario = (scenario: 'flood' | 'education' | 'medical') => {
+    switch (scenario) {
+      case 'flood':
+        handleLoadScenario(floodVolunteers, floodNeeds);
+        break;
+      case 'education':
+        handleLoadScenario(educationVolunteers, educationNeeds);
+        break;
+      case 'medical':
+        handleLoadScenario(medicalVolunteers, medicalNeeds);
+        break;
+    }
+  };
 
   return (
     <div className="min-h-screen bg-[#f8fafc] p-4 md:p-8">
       <div className="max-w-7xl mx-auto">
         {/* ─── Header ──────────────────────────────────────────────────────── */}
         <Header />
+
+        {/* ─── Demo Controls ───────────────────────────────────────────────── */}
+        <DemoControls
+          onLoadScenario={loadScenario}
+          onAutoAssign={handleAutoAssign}
+          onReset={handleReset}
+          matchCount={topMatches.length}
+          isLoading={isLoading}
+        />
 
         {/* ─── CSV Upload Strip ────────────────────────────────────────────── */}
         <div className="flex flex-wrap items-center gap-4 mb-8 p-4 bg-white/70 backdrop-blur-sm rounded-2xl border border-slate-100 shadow-sm">
@@ -95,6 +135,17 @@ function App() {
           />
         </div>
 
+        {/* ─── System Insights Panel ───────────────────────────────────────── */}
+        <InsightsPanel
+          coverageRate={coverageRate}
+          idleVolunteers={idleVolunteerCount}
+          urgentNeedsPending={urgentPendingCount}
+          totalMatches={topMatches.length}
+        />
+
+        {/* ─── Before vs After Comparison ──────────────────────────────────── */}
+        <ComparisonPanel />
+
         {/* ─── Top Recommended Matches ─────────────────────────────────────── */}
         <section className="mb-12">
           <div className="flex items-center gap-2 mb-6">
@@ -111,11 +162,12 @@ function App() {
 
           {topMatches.length > 0 ? (
             <div className="grid grid-cols-1 md:grid-cols-2 xl:grid-cols-3 gap-5">
-              {topMatches.map((match) => (
+              {topMatches.map((match, index) => (
                 <MatchCard
                   key={match.id}
                   match={match}
                   onAssign={handleAssign}
+                  isTopMatch={index === 0}
                 />
               ))}
             </div>
@@ -124,7 +176,7 @@ function App() {
               <EmptyState
                 icon={<Sparkles size={24} />}
                 title="No Matches Yet"
-                description="Upload volunteer and needs data to generate intelligent match recommendations."
+                description="Upload volunteer and needs data or load a demo scenario to generate intelligent match recommendations."
               />
             </div>
           )}
@@ -201,7 +253,7 @@ function App() {
           <div className="bg-white rounded-2xl p-8 shadow-2xl flex flex-col items-center gap-4 border border-slate-100">
             <div className="w-10 h-10 border-4 border-slate-200 border-t-blue-500 rounded-full animate-spin" />
             <p className="text-sm font-bold text-slate-700">
-              Parsing CSV data...
+              Processing...
             </p>
           </div>
         </div>
