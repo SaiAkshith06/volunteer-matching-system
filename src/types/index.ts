@@ -45,6 +45,8 @@ export interface MatchBreakdown {
   location: number;
   availability: number;
   urgency: number;
+  rating?: number;     // 0–1 normalized volunteer rating
+  workload?: number;   // 0–1 workload balancing factor
 }
 
 export interface Match {
