@@ -9,6 +9,7 @@ export const mockVolunteers: Volunteer[] = [
     availability: 'Weekends',
     rating: 4.5,
     avatar: 'AJ',
+    activeTaskCount: 0,
   },
   {
     id: 'v2',
@@ -18,6 +19,7 @@ export const mockVolunteers: Volunteer[] = [
     availability: 'Weekdays',
     rating: 4.2,
     avatar: 'RS',
+    activeTaskCount: 0,
   },
   {
     id: 'v3',
@@ -27,6 +29,7 @@ export const mockVolunteers: Volunteer[] = [
     availability: 'Evenings',
     rating: 4.8,
     avatar: 'ED',
+    activeTaskCount: 0,
   },
   {
     id: 'v4',
@@ -36,6 +39,7 @@ export const mockVolunteers: Volunteer[] = [
     availability: 'Mornings',
     rating: 3.9,
     avatar: 'MW',
+    activeTaskCount: 0,
   },
   {
     id: 'v5',
@@ -45,6 +49,7 @@ export const mockVolunteers: Volunteer[] = [
     availability: 'Flexible',
     rating: 4.6,
     avatar: 'SB',
+    activeTaskCount: 0,
   },
 ];
 
@@ -55,6 +60,7 @@ export const mockNeeds: Need[] = [
     requiredSkills: ['First Aid', 'Driving'],
     location: 'Downtown Clinic',
     urgency: 'High',
+    timeframe: 'Weekends',
     dateAdded: '2 hours ago',
     isAssigned: false,
   },
@@ -64,6 +70,7 @@ export const mockNeeds: Need[] = [
     requiredSkills: ['Cooking', 'Logistics'],
     location: 'Westside Shelter',
     urgency: 'High',
+    timeframe: 'Weekdays',
     dateAdded: '3 hours ago',
     isAssigned: false,
   },
@@ -82,6 +89,7 @@ export const mockNeeds: Need[] = [
     requiredSkills: ['Teaching'],
     location: 'North High School',
     urgency: 'Low',
+    timeframe: 'Weekends',
     dateAdded: '2 days ago',
     isAssigned: false,
   },

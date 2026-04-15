@@ -11,6 +11,7 @@ import {
 } from '../utils/matchInsights';
 import { parseVolunteersCsv, parseNeedsCsv } from '../utils/csvParser';
 import { exportAssignmentsCsv } from '../utils/exportCsv';
+import { AUTO_ASSIGN_MIN_SCORE } from '../config/matchingConfig';
 
 // ─── Toast Notification ──────────────────────────────────────────────────────
 
@@ -175,14 +176,16 @@ export function useVolunteerMatch(
     [addToast]
   );
 
-  // ── Assignment ────────────────────────────────────────────────────────────
+  // ── Assignment (FIX: no longer removes volunteer — increments task count) ─
 
   const handleAssign = useCallback(
     (match: Match) => {
       const newAssignment: Assignment = {
         id: uid(),
+        volunteerId: match.volunteer.id,
         volunteerName: match.volunteer.name,
         volunteerSkills: match.volunteer.skills.join(', '),
+        needId: match.need.id,
         needTitle: match.need.title,
         location: match.need.location,
         matchScore: match.score,
@@ -191,9 +194,13 @@ export function useVolunteerMatch(
 
       setAssignments((prev) => [...prev, newAssignment]);
 
-      // Remove volunteer from available list
+      // Increment volunteer's active task count (don't remove!)
       setVolunteers((prev) =>
-        prev.filter((v) => v.id !== match.volunteer.id)
+        prev.map((v) =>
+          v.id === match.volunteer.id
+            ? { ...v, activeTaskCount: (v.activeTaskCount ?? 0) + 1 }
+            : v
+        )
       );
 
       // Mark need as assigned
@@ -211,38 +218,50 @@ export function useVolunteerMatch(
     [addToast]
   );
 
-  // ── Auto-Assign ───────────────────────────────────────────────────────────
+  // ── Auto-Assign (uses config threshold) ───────────────────────────────────
 
   const handleAutoAssign = useCallback(() => {
-    const toAssign = autoAssignMatches(topMatches, 30);
+    const toAssign = autoAssignMatches(topMatches, AUTO_ASSIGN_MIN_SCORE);
     if (toAssign.length === 0) {
       addToast('No matches above threshold for auto-assignment', 'info');
       return;
     }
 
-    // Process each assignment
     const newAssignments: Assignment[] = [];
-    const assignedVolunteerIds = new Set<string>();
+    const taskIncrements = new Map<string, number>();
     const assignedNeedIds = new Set<string>();
 
     for (const match of toAssign) {
       newAssignments.push({
         id: uid(),
+        volunteerId: match.volunteer.id,
         volunteerName: match.volunteer.name,
         volunteerSkills: match.volunteer.skills.join(', '),
+        needId: match.need.id,
         needTitle: match.need.title,
         location: match.need.location,
         matchScore: match.score,
         assignedAt: new Date().toLocaleString(),
       });
-      assignedVolunteerIds.add(match.volunteer.id);
+      taskIncrements.set(
+        match.volunteer.id,
+        (taskIncrements.get(match.volunteer.id) ?? 0) + 1
+      );
       assignedNeedIds.add(match.need.id);
     }
 
     setAssignments((prev) => [...prev, ...newAssignments]);
+
+    // Increment task counts (don't remove volunteers)
     setVolunteers((prev) =>
-      prev.filter((v) => !assignedVolunteerIds.has(v.id))
+      prev.map((v) => {
+        const increment = taskIncrements.get(v.id);
+        return increment
+          ? { ...v, activeTaskCount: (v.activeTaskCount ?? 0) + increment }
+          : v;
+      })
     );
+
     setNeeds((prev) =>
       prev.map((n) =>
         assignedNeedIds.has(n.id) ? { ...n, isAssigned: true } : n

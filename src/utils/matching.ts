@@ -1,63 +1,41 @@
-import type { Volunteer, Need, Match, Urgency, MatchBreakdown } from '../types';
-
-// ─── Weight Constants (sum = 1.0) ────────────────────────────────────────────
-// Multi-factor scoring weights calibrated for balanced, realistic matching.
-// Skills dominate because skill‑fit is the strongest predictor of success.
-
-const WEIGHT_SKILLS = 0.35;
-const WEIGHT_LOCATION = 0.25;
-const WEIGHT_AVAILABILITY = 0.15;
-const WEIGHT_URGENCY = 0.10;
-const WEIGHT_RATING = 0.10;
-const WEIGHT_WORKLOAD = 0.05;
-
-const MAX_TOP_MATCHES = 10;
-
-// Maximum volunteer rating (used for normalization)
-const MAX_RATING = 5;
-
-// ─── Skill Priority Map ─────────────────────────────────────────────────────
-// High-priority skills receive a boost when matched, reflecting real-world
-// demand where healthcare and logistics volunteers are harder to find.
-
-const SKILL_PRIORITY: Record<string, number> = {
-  'first aid': 1.0,
-  healthcare: 1.0,
-  counseling: 0.95,
-  logistics: 0.9,
-  driving: 0.85,
-  teaching: 0.8,
-  'it support': 0.75,
-  cooking: 0.7,
-  general: 0.6,
-};
-
-const DEFAULT_SKILL_PRIORITY = 0.6;
-
-// ─── Workload Tracker ────────────────────────────────────────────────────────
-// Tracks how many tasks each volunteer has been assigned in the current
-// matching pass, used to discourage overloading a single volunteer.
-
-const volunteerTaskCount = new Map<string, number>();
-
 /**
- * Resets the workload tracker. Should be called at the start of each
- * full matching cycle to ensure counts reflect only current assignments.
+ * ─── MATCHING ENGINE (v3) ───────────────────────────────────────────────────
+ *
+ * Production-quality multi-factor scoring engine.
+ *
+ * Bug fixes applied in this version:
+ *   1. Removed module-level global workload Map — workload is now derived
+ *      from `volunteer.activeTaskCount` passed via state.
+ *   2. Removed artificial location score floor (0.5) — pure overlap ratio.
+ *   3. Uses `need.timeframe` directly instead of unsafe `as any` cast.
+ *   4. Hard filter layer (`shouldConsider`) skips impossible matches early.
+ *   5. All config pulled from `matchingConfig.ts` — no magic numbers.
+ *   6. Returns ALL matches (UI decides how many to show).
  */
-export function resetWorkloadTracker(): void {
-  volunteerTaskCount.clear();
-}
 
-/**
- * Records an assignment for workload tracking purposes.
- */
-export function recordAssignment(volunteerId: string): void {
-  const current = volunteerTaskCount.get(volunteerId) ?? 0;
-  volunteerTaskCount.set(volunteerId, current + 1);
-}
+import type {
+  Volunteer,
+  Need,
+  Match,
+  Urgency,
+  MatchBreakdown,
+  Assignment,
+} from '../types';
 
-// ─── Helper: Safe Number ─────────────────────────────────────────────────────
-// Guarantees a valid number in [0, 1], replacing NaN / undefined with 0.
+import {
+  DEFAULT_WEIGHTS,
+  SKILL_PRIORITY,
+  DEFAULT_SKILL_PRIORITY,
+  MAX_RATING,
+  MAX_ACTIVE_TASKS,
+  PARTIAL_OVERLAP_GROUPS,
+} from '../config/matchingConfig';
+
+import type { ScoringWeights } from '../config/matchingConfig';
+
+import { computeLocationScore } from '../services/distanceService';
+
+// ─── Helper: Clamp to [0, 1] ────────────────────────────────────────────────
 
 function safeScore(value: number): number {
   if (typeof value !== 'number' || Number.isNaN(value) || !Number.isFinite(value)) {
@@ -66,24 +44,57 @@ function safeScore(value: number): number {
   return Math.max(0, Math.min(1, value));
 }
 
+// ─── Hard Filter ─────────────────────────────────────────────────────────────
+
+/**
+ * Pre-scoring filter. Returns false if the volunteer should NOT be
+ * considered for this need, saving computation and avoiding invalid matches.
+ *
+ * A candidate is rejected if:
+ *   - Zero skill overlap with required skills
+ *   - At or above maximum active task count
+ *   - Availability is completely incompatible (non-flexible + mismatch)
+ */
+export function shouldConsider(volunteer: Volunteer, need: Need): boolean {
+  // 1. Skill overlap check
+  const vSkills = volunteer.skills.map((s) => (s ?? '').toLowerCase().trim());
+  const rSkills = need.requiredSkills.map((s) => (s ?? '').toLowerCase().trim());
+
+  const hasSkillOverlap = rSkills.some((rs) => vSkills.includes(rs));
+  if (!hasSkillOverlap) return false;
+
+  // 2. Workload cap
+  if ((volunteer.activeTaskCount ?? 0) >= MAX_ACTIVE_TASKS) return false;
+
+  // 3. Availability hard reject (only when timeframe is specified)
+  if (need.timeframe) {
+    const vol = (volunteer.availability ?? '').toLowerCase().trim();
+    const nTime = need.timeframe.toLowerCase().trim();
+
+    if (vol !== 'flexible' && vol !== nTime) {
+      // Check partial groups before rejecting
+      const inPartialGroup = PARTIAL_OVERLAP_GROUPS.some(
+        (group) => group.includes(vol) && group.includes(nTime)
+      );
+      if (!inPartialGroup) return false;
+    }
+  }
+
+  return true;
+}
+
 // ─── Individual Scoring Functions ────────────────────────────────────────────
 
 /**
- * Calculates the skills match score between a volunteer and a need.
+ * Skills match score with priority weighting and optional proficiency levels.
  *
- * Algorithm:
- * 1. Normalize all skill strings (lowercase, trim).
- * 2. Compute the raw overlap ratio: matched / required.
- * 3. Apply priority weighting — high-priority skills that match receive
- *    an additive boost, making domain-critical matches rank higher.
- * 4. The final score is the average of the raw ratio and the
- *    priority-weighted ratio, clamped to [0, 1].
- *
- * @returns A value between 0 and 1.
+ * If `skillLevels` is provided, each matched skill is weighted by its
+ * proficiency level (1–3), normalised against the max level (3).
  */
 export function skillsScore(
   volunteerSkills: string[] = [],
-  requiredSkills: string[] = []
+  requiredSkills: string[] = [],
+  skillLevels?: Record<string, number>
 ): number {
   if (!requiredSkills || requiredSkills.length === 0) return 1;
   if (!volunteerSkills || volunteerSkills.length === 0) return 0;
@@ -95,14 +106,12 @@ export function skillsScore(
     (s) => (s ?? '').toLowerCase().trim()
   );
 
-  // Raw overlap ratio
   const matchedSkills = normalizedRequired.filter((skill) =>
     normalizedVolunteer.includes(skill)
   );
   const rawRatio = matchedSkills.length / normalizedRequired.length;
 
-  // Priority-weighted score: sum of priorities for matched skills divided
-  // by sum of priorities for all required skills.
+  // Priority-weighted ratio
   const totalRequiredPriority = normalizedRequired.reduce(
     (sum, skill) => sum + (SKILL_PRIORITY[skill] ?? DEFAULT_SKILL_PRIORITY),
     0
@@ -114,62 +123,35 @@ export function skillsScore(
   const priorityRatio =
     totalRequiredPriority > 0 ? matchedPriority / totalRequiredPriority : 0;
 
-  // Blend raw and priority-weighted scores (60/40 split favoring priority)
-  const blendedScore = rawRatio * 0.4 + priorityRatio * 0.6;
+  // Proficiency bonus (if skill levels available)
+  let proficiencyBonus = 0;
+  if (skillLevels && matchedSkills.length > 0) {
+    const avgProficiency =
+      matchedSkills.reduce((sum, skill) => {
+        // Try original case and lowered case
+        const level = skillLevels[skill] ?? skillLevels[(skill ?? '').toLowerCase()] ?? 1;
+        return sum + level;
+      }, 0) / matchedSkills.length;
+    proficiencyBonus = (avgProficiency / 3) * 0.1; // Up to +0.1 bonus
+  }
+
+  const blendedScore = rawRatio * 0.4 + priorityRatio * 0.6 + proficiencyBonus;
 
   return safeScore(blendedScore);
 }
 
 /**
- * Location matching score based on normalized word overlap.
- *
- * Algorithm:
- * 1. Normalize both strings (lowercase, trim).
- * 2. If exact match → 1.0.
- * 3. Split into words and compute Jaccard-like overlap against the
- *    need's location words.
- * 4. Partial word matches (≥ 1 overlapping word) score ≥ 0.5
- *    to reward "nearby" locations.
- *
- * @returns A value between 0 and 1.
+ * Location score — delegates to distanceService.
  */
 export function locationScore(
   volunteerLocation: string = '',
   needLocation: string = ''
 ): number {
-  const vLoc = (volunteerLocation ?? '').toLowerCase().trim();
-  const nLoc = (needLocation ?? '').toLowerCase().trim();
-
-  if (vLoc === nLoc && vLoc !== '') return 1;
-  if (!vLoc || !nLoc) return 0;
-
-  const vWords = vLoc.split(/\s+/).filter((w) => w.length > 0);
-  const nWords = nLoc.split(/\s+/).filter((w) => w.length > 0);
-
-  if (vWords.length === 0 || nWords.length === 0) return 0;
-
-  // Count overlapping words
-  const matchingWords = nWords.filter((w) => vWords.includes(w)).length;
-
-  if (matchingWords === 0) return 0;
-
-  const overlapRatio = matchingWords / nWords.length;
-
-  // Boost partial matches to at least 0.5 so "nearby" still scores
-  return safeScore(overlapRatio < 1 ? Math.max(0.5, overlapRatio) : 1);
+  return safeScore(computeLocationScore(volunteerLocation, needLocation));
 }
 
 /**
- * Availability matching score.
- *
- * Rules:
- * - If the need has no timeframe constraint → 1.0 (any volunteer fits).
- * - If the volunteer is "flexible" → 1.0.
- * - Exact match → 1.0.
- * - Partial overlap (e.g., "weekdays" vs "mornings") → 0.5.
- * - No match → 0.0.
- *
- * @returns A value between 0 and 1.
+ * Availability matching score using actual timeframe data.
  */
 export function availabilityScore(
   volunteerAvailability: string = '',
@@ -177,24 +159,13 @@ export function availabilityScore(
 ): number {
   const vol = (volunteerAvailability ?? '').toLowerCase().trim();
 
-  // No constraint on timing — everyone qualifies
   if (!needTimeframe) return 1.0;
-
-  // Flexible volunteers can always work
   if (vol === 'flexible') return 1.0;
 
   const need = needTimeframe.toLowerCase().trim();
-
-  // Exact match
   if (vol === need) return 1.0;
 
-  // Partial overlap heuristic — time ranges that partially intersect
-  const PARTIAL_GROUPS: string[][] = [
-    ['weekdays', 'mornings', 'evenings'],
-    ['weekends', 'mornings', 'evenings'],
-  ];
-
-  for (const group of PARTIAL_GROUPS) {
+  for (const group of PARTIAL_OVERLAP_GROUPS) {
     if (group.includes(vol) && group.includes(need)) {
       return 0.5;
     }
@@ -205,11 +176,6 @@ export function availabilityScore(
 
 /**
  * Urgency-based score.
- *
- * Maps urgency labels to numeric importance scores.
- * High-urgency needs receive maximum priority so they surface first.
- *
- * @returns A value between 0 and 1.
  */
 export function urgencyScore(urgency: Urgency = 'Low'): number {
   const scoreMap: Record<string, number> = {
@@ -222,12 +188,7 @@ export function urgencyScore(urgency: Urgency = 'Low'): number {
 }
 
 /**
- * Volunteer rating score.
- *
- * Normalizes the volunteer's 0–5 rating to a 0–1 scale.
- * Higher-rated volunteers are preferred when other factors are equal.
- *
- * @returns A value between 0 and 1.
+ * Volunteer rating score (0–5 → 0–1).
  */
 export function ratingScore(rating: number = 0): number {
   if (typeof rating !== 'number' || Number.isNaN(rating)) return 0;
@@ -235,24 +196,25 @@ export function ratingScore(rating: number = 0): number {
 }
 
 /**
- * Workload balancing score.
+ * Workload score derived from activeTaskCount on the volunteer object.
+ * No global state — purely functional.
  *
- * Uses an inverse function to penalize volunteers who already have
- * many assignments, encouraging even distribution:
- *
- *   score = 1 / (1 + tasksAssigned)
- *
- * A volunteer with 0 tasks scores 1.0, with 1 task scores 0.5, etc.
- *
- * @returns A value between 0 and 1.
+ *   score = 1 / (1 + activeTaskCount)
  */
-export function workloadScore(volunteerId: string): number {
-  const tasksAssigned = volunteerTaskCount.get(volunteerId) ?? 0;
-  return safeScore(1 / (1 + tasksAssigned));
+export function workloadScore(activeTaskCount: number): number {
+  return safeScore(1 / (1 + Math.max(0, activeTaskCount)));
+}
+
+/**
+ * Reliability score based on assignment outcomes.
+ * Returns the volunteer's reliability score or 0.8 as a neutral default
+ * for volunteers with no history.
+ */
+export function reliabilityScore(volunteer: Volunteer): number {
+  return safeScore(volunteer.reliabilityScore ?? 0.8);
 }
 
 // ─── Reason Builder ──────────────────────────────────────────────────────────
-// Generates human-readable explanations for each factor, displayed in the UI.
 
 function buildReasons(
   breakdown: MatchBreakdown,
@@ -260,7 +222,6 @@ function buildReasons(
 ): string[] {
   const reasons: string[] = [];
 
-  // Skills
   const skillsPct = Math.round((breakdown.skills ?? 0) * 100);
   if (skillsPct === 100) {
     reasons.push('All required skills matched');
@@ -270,21 +231,18 @@ function buildReasons(
     reasons.push('No skills matched');
   }
 
-  // Location
   if (breakdown.location === 1) {
     reasons.push('Exact location match');
   } else if (breakdown.location > 0) {
     reasons.push('Nearby location');
   }
 
-  // Availability
   if (breakdown.availability === 1) {
     reasons.push('Available during required time');
   } else if (breakdown.availability >= 0.5) {
     reasons.push('Partially available');
   }
 
-  // Urgency
   const urg = (urgency ?? '').toLowerCase();
   if (urg === 'high') {
     reasons.push('High priority need');
@@ -292,18 +250,20 @@ function buildReasons(
     reasons.push('Medium priority need');
   }
 
-  // Rating
   if ((breakdown.rating ?? 0) >= 0.9) {
     reasons.push('Top-rated volunteer');
   } else if ((breakdown.rating ?? 0) >= 0.7) {
     reasons.push('Highly rated volunteer');
   }
 
-  // Workload
   if ((breakdown.workload ?? 0) >= 0.8) {
     reasons.push('Low current workload');
   } else if ((breakdown.workload ?? 0) < 0.5) {
     reasons.push('Heavy workload — consider alternatives');
+  }
+
+  if ((breakdown.reliability ?? 0) >= 0.9) {
+    reasons.push('Excellent track record');
   }
 
   return reasons;
@@ -314,36 +274,35 @@ function buildReasons(
 /**
  * Computes the multi-factor match score between a volunteer and a need.
  *
- * Final score formula:
- *   score = (skills × 0.35) + (location × 0.25) + (availability × 0.15)
- *         + (urgency × 0.10) + (rating × 0.10) + (workload × 0.05)
- *
- * Each sub-score is a float in [0, 1].
- * The final score is an integer in [0, 100].
+ * All sub-scores are [0, 1]. Final score is an integer [0, 100].
+ * Weights are configurable via the `weights` parameter.
  */
-function scoreMatch(volunteer: Volunteer, need: Need): Match {
-  const skills = skillsScore(volunteer.skills, need.requiredSkills);
+function scoreMatch(
+  volunteer: Volunteer,
+  need: Need,
+  weights: ScoringWeights = DEFAULT_WEIGHTS
+): Match {
+  const skills = skillsScore(
+    volunteer.skills,
+    need.requiredSkills,
+    volunteer.skillLevels
+  );
   const location = locationScore(volunteer.location, need.location);
-
-  // Needs may carry a timeframe; fall back gracefully if absent
-  const timeframe = (need as Record<string, unknown>).timeframe as
-    | string
-    | undefined;
-  const availability = availabilityScore(volunteer.availability, timeframe);
+  const availability = availabilityScore(volunteer.availability, need.timeframe);
   const urgency = urgencyScore(need.urgency);
   const rating = ratingScore(volunteer.rating);
-  const workload = workloadScore(volunteer.id);
+  const workload = workloadScore(volunteer.activeTaskCount);
+  const reliability = reliabilityScore(volunteer);
 
-  // Weighted sum
   const rawScore =
-    skills * WEIGHT_SKILLS +
-    location * WEIGHT_LOCATION +
-    availability * WEIGHT_AVAILABILITY +
-    urgency * WEIGHT_URGENCY +
-    rating * WEIGHT_RATING +
-    workload * WEIGHT_WORKLOAD;
+    skills * weights.skills +
+    location * weights.location +
+    availability * weights.availability +
+    urgency * weights.urgency +
+    rating * weights.rating +
+    workload * weights.workload +
+    reliability * weights.reliability;
 
-  // Normalize to 0–100 integer
   const score = Math.max(0, Math.min(100, Math.round(rawScore * 100)));
 
   const breakdown: MatchBreakdown = {
@@ -353,6 +312,7 @@ function scoreMatch(volunteer: Volunteer, need: Need): Match {
     urgency,
     rating,
     workload,
+    reliability,
   };
 
   const reasons = buildReasons(breakdown, need.urgency);
@@ -367,22 +327,23 @@ function scoreMatch(volunteer: Volunteer, need: Need): Match {
   };
 }
 
-// ─── Generate Top Matches ────────────────────────────────────────────────────
+// ─── Generate Matches ────────────────────────────────────────────────────────
 
 /**
- * Generates ranked matches between all available volunteers and unassigned needs.
+ * Generates ranked matches between all available volunteers and unassigned
+ * needs.
  *
- * Process:
- * 1. Filter out already-assigned needs.
- * 2. Score every (volunteer, need) pair.
- * 3. Sort descending by score.
- * 4. Return the top N matches.
+ * Changes from v2:
+ *   - Uses `shouldConsider()` hard filter to skip impossible pairs.
+ *   - Returns ALL qualifying matches (no arbitrary cap).
+ *   - Accepts optional `weights` for per-task scoring profiles.
  *
- * Time complexity: O(V × N × log(V × N)) where V = volunteers, N = needs.
+ * Time complexity: O(V × N × log(V × N))
  */
 export function generateMatches(
   volunteers: Volunteer[] = [],
-  needs: Need[] = []
+  needs: Need[] = [],
+  weights: ScoringWeights = DEFAULT_WEIGHTS
 ): Match[] {
   if (!volunteers || !needs) return [];
 
@@ -393,14 +354,47 @@ export function generateMatches(
     if (!volunteer) continue;
     for (const need of availableNeeds) {
       if (!need) continue;
-      const match = scoreMatch(volunteer, need);
+
+      // Hard filter — skip impossible matches early
+      if (!shouldConsider(volunteer, need)) continue;
+
+      const match = scoreMatch(volunteer, need, weights);
       if (match.score > 0) {
         allMatches.push(match);
       }
     }
   }
 
-  // Sort descending by score, keep top N
   allMatches.sort((a, b) => (b.score ?? 0) - (a.score ?? 0));
-  return allMatches.slice(0, MAX_TOP_MATCHES);
+  return allMatches;
+}
+
+// ─── Feedback Loop ───────────────────────────────────────────────────────────
+
+/**
+ * Computes an updated reliability score for a volunteer based on their
+ * assignment outcomes. Call this after recording feedback.
+ *
+ * Weights: excellent = 1.0, completed = 0.8, no-show = 0.0
+ */
+export function computeReliability(assignments: Assignment[]): number {
+  if (assignments.length === 0) return 0.8; // Neutral default
+
+  const outcomeWeight: Record<string, number> = {
+    excellent: 1.0,
+    completed: 0.8,
+    'no-show': 0.0,
+  };
+
+  let total = 0;
+  let count = 0;
+
+  for (const a of assignments) {
+    if (a.outcome) {
+      total += outcomeWeight[a.outcome] ?? 0.5;
+      count++;
+    }
+  }
+
+  return count > 0 ? total / count : 0.8;
 }

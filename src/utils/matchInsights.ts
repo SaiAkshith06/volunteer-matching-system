@@ -1,15 +1,23 @@
-import type { 
-  Match, 
-  MatchBreakdown, 
-  Volunteer, 
-  Need, 
-  Assignment, 
-  Urgency 
+/**
+ * ─── MATCH INSIGHTS (Layer 2) ───────────────────────────────────────────────
+ *
+ * UI-facing intelligence layer. Separated from core scoring logic.
+ * Provides: confidence, labeling, reasons, smart sorting, auto-assign,
+ * and dashboard insight generators.
+ */
+
+import type {
+  Match,
+  MatchBreakdown,
+  Volunteer,
+  Need,
+  Assignment,
+  Urgency,
 } from '../types';
 
-/**
- * ─── PART 1: CONFIDENCE SYSTEM ──────────────────────────────────────────────
- */
+import { AUTO_ASSIGN_MIN_SCORE } from '../config/matchingConfig';
+
+// ─── Confidence System ──────────────────────────────────────────────────────
 
 export function getConfidence(score: number): 'High' | 'Medium' | 'Low' {
   if (score >= 85) return 'High';
@@ -20,60 +28,56 @@ export function getConfidence(score: number): 'High' | 'Medium' | 'Low' {
 export function getConfidenceColor(score: number): string {
   const confidence = getConfidence(score);
   switch (confidence) {
-    case 'High': return '#10b981'; // green-500
-    case 'Medium': return '#3b82f6'; // blue-500
-    default: return '#94a3b8'; // slate-400
+    case 'High':
+      return '#10b981';
+    case 'Medium':
+      return '#3b82f6';
+    default:
+      return '#94a3b8';
   }
 }
 
-/**
- * ─── PART 2: MATCH REASON GENERATOR ─────────────────────────────────────────
- */
+// ─── Reason Generator ───────────────────────────────────────────────────────
 
 export function generateMatchReasons(breakdown: MatchBreakdown): string[] {
   const reasons: string[] = [];
   const THRESHOLD = 0.6;
 
-  // 1. Skills match
   if (breakdown.skills > THRESHOLD) {
     const pct = Math.round(breakdown.skills * 100);
     reasons.push(`Strong skill match (${pct}%)`);
   }
 
-  // 2. Location proximity
   if (breakdown.location >= 0.9) {
     reasons.push('Exact location match');
   } else if (breakdown.location > THRESHOLD) {
     reasons.push('Nearby location');
   }
 
-  // 3. Availability overlap
   if (breakdown.availability > THRESHOLD) {
     reasons.push('Available at required time');
   }
 
-  // 4. Critical urgency
   if (breakdown.urgency > THRESHOLD) {
     reasons.push('High priority need');
   }
 
-  // 5. High ratings
-  if (breakdown.rating && breakdown.rating > 0.8) {
+  if (breakdown.rating > 0.8) {
     reasons.push('Highly rated volunteer');
   }
 
-  // 6. Healthy workload
-  if (breakdown.workload && breakdown.workload > 0.7) {
+  if (breakdown.workload > 0.7) {
     reasons.push('Low current workload');
   }
 
-  // Limit to most meaningful reasons
+  if ((breakdown.reliability ?? 0) >= 0.9) {
+    reasons.push('Excellent track record');
+  }
+
   return reasons.slice(0, 5);
 }
 
-/**
- * ─── PART 3: MATCH LABELING SYSTEM ──────────────────────────────────────────
- */
+// ─── Match Labeling ─────────────────────────────────────────────────────────
 
 export function getMatchLabel(score: number): string {
   if (score >= 90) return 'Excellent Match';
@@ -82,40 +86,40 @@ export function getMatchLabel(score: number): string {
   return 'Weak Match';
 }
 
-/**
- * ─── PART 4: SMART SORTING ──────────────────────────────────────────────────
- */
+// ─── Smart Sorting ──────────────────────────────────────────────────────────
 
 export function sortMatches(matches: Match[]): Match[] {
   const urgencyWeight: Record<Urgency, number> = {
     High: 3,
     Medium: 2,
-    Low: 1
+    Low: 1,
   };
 
   return [...matches].sort((a, b) => {
-    // 1. Primary: Score (Descending)
     if (b.score !== a.score) return b.score - a.score;
 
-    // 2. Secondary: Urgency (Higher first)
     const urgencyA = urgencyWeight[a.need.urgency] || 0;
     const urgencyB = urgencyWeight[b.need.urgency] || 0;
     if (urgencyB !== urgencyA) return urgencyB - urgencyA;
 
-    // 3. Tertiary: Skills score (Higher first)
     const skillA = a.breakdown?.skills || 0;
     const skillB = b.breakdown?.skills || 0;
     return skillB - skillA;
   });
 }
 
-/**
- * ─── PART 5: AUTO-ASSIGN FEATURE ────────────────────────────────────────────
- */
+// ─── Auto-Assign (Greedy) ───────────────────────────────────────────────────
 
+/**
+ * Greedy one-to-one auto-assignment.
+ *
+ * Uses `AUTO_ASSIGN_MIN_SCORE` from config as the threshold.
+ * Skips already-busy volunteers (checked via activeTaskCount in the match
+ * data) and already-assigned needs.
+ */
 export function autoAssignMatches(
-  matches: Match[], 
-  threshold = 80
+  matches: Match[],
+  threshold: number = AUTO_ASSIGN_MIN_SCORE
 ): Match[] {
   const sorted = sortMatches(matches);
   const assignedVolunteers = new Set<string>();
@@ -128,53 +132,55 @@ export function autoAssignMatches(
     const vId = match.volunteer.id;
     const nId = match.need.id;
 
-    if (!assignedVolunteers.has(vId) && !assignedNeeds.has(nId)) {
-      assignedVolunteers.add(vId);
-      assignedNeeds.add(nId);
-      results.push(match);
-    }
+    // Skip if either party is already claimed in this pass
+    if (assignedVolunteers.has(vId) || assignedNeeds.has(nId)) continue;
+
+    // Skip if need is already assigned
+    if (match.need.isAssigned) continue;
+
+    assignedVolunteers.add(vId);
+    assignedNeeds.add(nId);
+    results.push(match);
   }
 
   return results;
 }
 
-/**
- * ─── PART 6: INSIGHT GENERATORS ─────────────────────────────────────────────
- */
+// ─── Insight Generators ─────────────────────────────────────────────────────
 
 export function getCoverageRate(
-  assignments: Assignment[], 
+  assignments: Assignment[],
   totalNeeds: number
 ): number {
   if (totalNeeds === 0) return 0;
   return Math.round((assignments.length / totalNeeds) * 100);
 }
 
+/**
+ * Counts volunteers with zero active tasks.
+ * Uses `volunteerId` on Assignment (not names — fixing the identity bug).
+ */
 export function getIdleVolunteers(
-  volunteers: Volunteer[], 
+  volunteers: Volunteer[],
   assignments: Assignment[]
 ): number {
-  const assignedNames = new Set(assignments.map(a => a.volunteerName));
-  return volunteers.filter(v => !assignedNames.has(v.name)).length;
+  const assignedIds = new Set(assignments.map((a) => a.volunteerId));
+  return volunteers.filter((v) => !assignedIds.has(v.id)).length;
 }
 
 export function getUrgentNeedsPending(needs: Need[]): number {
-  return needs.filter(n => n.urgency === 'High' && !n.isAssigned).length;
+  return needs.filter((n) => n.urgency === 'High' && !n.isAssigned).length;
 }
 
-/**
- * ─── PART 7: ENRICHMENT ─────────────────────────────────────────────────────
- * Helper to transform a Layer 1 Match into a Layer 2 Intelligent Match
- */
+// ─── Enrichment ─────────────────────────────────────────────────────────────
 
 export function enrichMatch(match: Match): Match {
-  const score = match.score;
-  const breakdown = match.breakdown;
-
   return {
     ...match,
-    confidence: getConfidence(score),
-    label: getMatchLabel(score),
-    reasons: breakdown ? generateMatchReasons(breakdown) : match.reasons
+    confidence: getConfidence(match.score),
+    label: getMatchLabel(match.score),
+    reasons: match.breakdown
+      ? generateMatchReasons(match.breakdown)
+      : match.reasons,
   };
 }

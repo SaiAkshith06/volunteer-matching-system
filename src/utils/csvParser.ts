@@ -121,6 +121,7 @@ export function parseVolunteersCsv(file: File): Promise<ParseResult<Volunteer>> 
             availability: parseAvailability(row.availability),
             rating: Math.round(rating * 10) / 10,
             avatar: getInitials(row.name),
+            activeTaskCount: 0,
           });
         });
 
@@ -184,6 +185,7 @@ export function parseNeedsCsv(file: File): Promise<ParseResult<Need>> {
           const requiredSkills = rawRow['requiredskills']?.trim();
           const location = rawRow['location']?.trim();
           const urgencyRaw = rawRow['urgency']?.trim();
+          const timeframe = rawRow['timeframe']?.trim() || undefined;
 
           if (!title) {
             errors.push(`Row ${rowNum}: Missing need title`);
@@ -217,6 +219,7 @@ export function parseNeedsCsv(file: File): Promise<ParseResult<Need>> {
             requiredSkills: skills,
             location: location || 'Unknown',
             urgency,
+            timeframe,
             dateAdded: 'Just now',
             isAssigned: false,
           });

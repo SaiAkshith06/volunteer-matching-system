@@ -78,6 +78,8 @@ const MatchCard: React.FC<MatchCardProps> = ({
     location: 0,
     availability: 0,
     urgency: 0,
+    rating: 0,
+    workload: 0,
   };
 
   const confidence = getConfidence(match.score);
