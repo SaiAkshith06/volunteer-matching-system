@@ -56,6 +56,8 @@ export interface Match {
   score: number; // 0‑100
   breakdown?: MatchBreakdown;
   reasons: string[];
+  confidence?: 'High' | 'Medium' | 'Low';
+  label?: string;
 }
 
 export interface Assignment {
