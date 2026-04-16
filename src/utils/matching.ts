@@ -262,16 +262,43 @@ export function availabilityScore(
 }
 
 /**
- * Urgency-based score.
+ * Urgency-based score with optional deadline decay.
+ *
+ * Base score from urgency label, plus a deadline proximity boost:
+ *   - Deadline already passed → +0.3 (maximum urgency)
+ *   - < 24 hours remaining   → +0.2
+ *   - < 72 hours remaining   → +0.1
+ *   - > 72 hours remaining   → +0.0 (no boost)
+ *
+ * Final result is clamped to [0, 1] via safeScore().
  */
-export function urgencyScore(urgency: Urgency = 'Low'): number {
+export function urgencyScore(urgency: Urgency = 'Low', deadline?: string): number {
   const scoreMap: Record<string, number> = {
     high: 1.0,
     medium: 0.6,
     low: 0.3,
   };
   const key = (urgency ?? 'Low').toLowerCase().trim();
-  return safeScore(scoreMap[key] ?? 0.3);
+  let base = scoreMap[key] ?? 0.3;
+
+  // Deadline proximity boost
+  if (deadline) {
+    const deadlineMs = new Date(deadline).getTime();
+    if (!Number.isNaN(deadlineMs)) {
+      const hoursRemaining = (deadlineMs - Date.now()) / (1000 * 60 * 60);
+
+      if (hoursRemaining <= 0) {
+        // Deadline has passed — maximum urgency
+        base += 0.3;
+      } else if (hoursRemaining < 24) {
+        base += 0.2;
+      } else if (hoursRemaining < 72) {
+        base += 0.1;
+      }
+    }
+  }
+
+  return safeScore(base);
 }
 
 /**
@@ -305,7 +332,8 @@ export function reliabilityScore(volunteer: Volunteer): number {
 
 function buildReasons(
   breakdown: MatchBreakdown,
-  urgency: Urgency = 'Low'
+  urgency: Urgency = 'Low',
+  deadline?: string
 ): string[] {
   const reasons: string[] = [];
 
@@ -335,6 +363,20 @@ function buildReasons(
     reasons.push('High priority need');
   } else if (urg === 'medium') {
     reasons.push('Medium priority need');
+  }
+
+  if (deadline) {
+    const deadlineMs = new Date(deadline).getTime();
+    if (!Number.isNaN(deadlineMs)) {
+      const hoursRemaining = (deadlineMs - Date.now()) / (1000 * 60 * 60);
+      if (hoursRemaining <= 0) {
+        reasons.push('⚠ Deadline has passed');
+      } else if (hoursRemaining < 24) {
+        reasons.push('Deadline within 24 hours');
+      } else if (hoursRemaining < 72) {
+        reasons.push('Deadline approaching (< 3 days)');
+      }
+    }
   }
 
   if ((breakdown.rating ?? 0) >= 0.9) {
@@ -383,7 +425,7 @@ function scoreMatch(
     need.lng
   );
   const availability = availabilityScore(volunteer, need);
-  const urgency = urgencyScore(need.urgency);
+  const urgency = urgencyScore(need.urgency, need.deadline);
   const rating = ratingScore(volunteer.rating);
   const workload = workloadScore(volunteer.activeTaskCount);
   const reliability = reliabilityScore(volunteer);
@@ -409,7 +451,7 @@ function scoreMatch(
     reliability,
   };
 
-  const reasons = buildReasons(breakdown, need.urgency);
+  const reasons = buildReasons(breakdown, need.urgency, need.deadline);
 
   return {
     id: `${volunteer.id}-${need.id}`,

@@ -31,7 +31,7 @@ export interface OptimalAssignment {
  * Cell values = match scores (0–100). If no match exists for a pair, the
  * score is 0 (which becomes cost = 100, making it undesirable).
  */
-function buildScoreMatrix(
+export function buildScoreMatrix(
   matches: Match[],
   volunteerIds: string[],
   needIds: string[]
