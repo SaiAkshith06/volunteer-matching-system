@@ -10,6 +10,7 @@ interface ExportRow {
   location: string;
   match_score: number;
   assigned_at: string;
+  timestamp: string;
   outcome: string;
 }
 
@@ -23,6 +24,7 @@ export function exportAssignmentsCsv(assignments: Assignment[]): void {
     location: a.location,
     match_score: a.matchScore,
     assigned_at: a.assignedAt,
+    timestamp: a.timestamp ?? '',
     outcome: a.outcome ?? '',
   }));
 

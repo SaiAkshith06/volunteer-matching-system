@@ -1,6 +1,6 @@
-name,skills,location,availability,rating
-John Carter,First Aid;Driving,Downtown,Weekdays,4.3
-Priya Patel,Teaching;Counseling,North,Weekends,4.7
-Marcus Lee,Logistics;Cooking,Westside,Flexible,3.8
-Diana Torres,IT Support;Teaching,East,Evenings,4.5
-James O'Brien,First Aid;Logistics,Downtown,Mornings,4.1
+name,skills,location,availability,rating,lat,lng,avail_start,avail_end
+John Carter,First Aid:3;Driving:2,Downtown,Weekdays,4.3,12.9716,77.5946,09:00,17:00
+Priya Patel,Teaching:3;Counseling:2,North,Weekends,4.7,12.9800,77.5900,08:00,16:00
+Marcus Lee,Logistics:2;Cooking:1,Westside,Flexible,3.8,12.9650,77.5800,,
+Diana Torres,IT Support:3;Teaching:2,East,Evenings,4.5,12.9750,77.6100,17:00,22:00
+James O'Brien,First Aid:2;Logistics:1,Downtown,Mornings,4.1,12.9720,77.5950,06:00,12:00

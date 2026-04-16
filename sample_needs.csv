@@ -1,5 +1,5 @@
-title,requiredSkills,location,urgency
-Blood Drive at City Hall,First Aid,Downtown,High
-After-School Tutoring,Teaching;Counseling,North High School,Medium
-Disaster Relief Logistics,Logistics;Driving,Westside,High
-Senior Center IT Help,IT Support,East Community Center,Low
+title,requiredSkills,location,urgency,timeframe,lat,lng,timeframe_start,timeframe_end,deadline,team_size
+Blood Drive at City Hall,First Aid,Downtown,High,Weekdays,12.9716,77.5946,09:00,15:00,2026-04-25,2
+After-School Tutoring,Teaching;Counseling,North High School,Medium,Weekends,12.9805,77.5905,10:00,14:00,,1
+Disaster Relief Logistics,Logistics;Driving,Westside,High,Weekdays,12.9655,77.5805,08:00,16:00,2026-04-20,3
+Senior Center IT Help,IT Support,East Community Center,Low,,12.9755,77.6105,,,1

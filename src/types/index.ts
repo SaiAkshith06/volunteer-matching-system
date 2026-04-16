@@ -30,7 +30,15 @@ export interface Volunteer {
   /** Proficiency level per skill (1 = basic, 2 = intermediate, 3 = expert) */
   skillLevels?: Record<string, number>;
   location: string;
+  /** Latitude for distance-based matching */
+  lat?: number;
+  /** Longitude for distance-based matching */
+  lng?: number;
   availability: Availability;
+  /** ISO time string for availability window start (e.g. "09:00") */
+  availStart?: string;
+  /** ISO time string for availability window end (e.g. "17:00") */
+  availEnd?: string;
   rating: number; // 0‑5
   avatar: string;
   /** Number of tasks currently assigned to this volunteer */
@@ -44,9 +52,21 @@ export interface Need {
   title: string;
   requiredSkills: Skill[];
   location: string;
+  /** Latitude for distance-based matching */
+  lat?: number;
+  /** Longitude for distance-based matching */
+  lng?: number;
   urgency: Urgency;
   /** Time window required (e.g. "Weekdays", "Mornings") */
   timeframe?: string;
+  /** ISO time string for need window start (e.g. "08:00") */
+  timeframeStart?: string;
+  /** ISO time string for need window end (e.g. "16:00") */
+  timeframeEnd?: string;
+  /** Deadline for the need (ISO date string) */
+  deadline?: string;
+  /** Number of volunteers needed for this task (default: 1) */
+  teamSizeNeeded?: number;
   dateAdded: string;
   isAssigned: boolean;
 }
@@ -82,6 +102,8 @@ export interface Assignment {
   location: string;
   matchScore: number;
   assignedAt: string;
+  /** ISO timestamp of when the assignment was created */
+  timestamp: string;
   /** Feedback provided after assignment completion */
   outcome?: AssignmentOutcome;
 }
@@ -94,6 +116,10 @@ export interface VolunteerCsvRow {
   location: string;
   availability: string;
   rating: string;
+  lat?: string;
+  lng?: string;
+  avail_start?: string;
+  avail_end?: string;
 }
 
 export interface NeedCsvRow {
@@ -102,6 +128,12 @@ export interface NeedCsvRow {
   location: string;
   urgency: string;
   timeframe?: string;
+  lat?: string;
+  lng?: string;
+  timeframe_start?: string;
+  timeframe_end?: string;
+  deadline?: string;
+  team_size?: string;
 }
 
 // ─── Parsing Result ──────────────────────────────────────────────────────────

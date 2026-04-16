@@ -68,6 +68,9 @@ export const MAX_ACTIVE_TASKS = 3;
 /** Maximum volunteer rating (for normalisation) */
 export const MAX_RATING = 5;
 
+/** Maximum skill proficiency level */
+export const MAX_PROFICIENCY = 3;
+
 // ─── Availability Partial-Overlap Groups ────────────────────────────────────
 // Pairs of time keywords that partially overlap score 0.5
 
@@ -75,3 +78,11 @@ export const PARTIAL_OVERLAP_GROUPS: string[][] = [
   ['weekdays', 'mornings', 'evenings'],
   ['weekends', 'mornings', 'evenings'],
 ];
+
+// ─── Distance Configuration ─────────────────────────────────────────────────
+
+/** Maximum distance (km) beyond which location score drops to 0 */
+export const MAX_DISTANCE_KM = 50;
+
+/** Earth's radius in kilometres (for Haversine) */
+export const EARTH_RADIUS_KM = 6371;

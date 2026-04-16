@@ -1,16 +1,17 @@
 /**
- * ─── MATCHING ENGINE (v3) ───────────────────────────────────────────────────
+ * ─── MATCHING ENGINE (v4) ───────────────────────────────────────────────────
  *
- * Production-quality multi-factor scoring engine.
+ * Production-grade multi-factor scoring engine.
  *
- * Bug fixes applied in this version:
- *   1. Removed module-level global workload Map — workload is now derived
- *      from `volunteer.activeTaskCount` passed via state.
- *   2. Removed artificial location score floor (0.5) — pure overlap ratio.
- *   3. Uses `need.timeframe` directly instead of unsafe `as any` cast.
- *   4. Hard filter layer (`shouldConsider`) skips impossible matches early.
- *   5. All config pulled from `matchingConfig.ts` — no magic numbers.
- *   6. Returns ALL matches (UI decides how many to show).
+ * Improvements over v3:
+ *   1. Time-window availability scoring (overlap %).
+ *   2. Lat/lng coordinate-based location scoring via distanceService.
+ *   3. Skill proficiency weighting with configurable max level.
+ *   4. All sub-scores strictly normalised [0, 1].
+ *   5. Hard filter layer enforces workload cap, skill overlap, and
+ *      availability compatibility before scoring.
+ *   6. Returns ALL matches — UI decides how many to display.
+ *   7. No global state — all inputs are function parameters.
  */
 
 import type {
@@ -28,6 +29,7 @@ import {
   DEFAULT_SKILL_PRIORITY,
   MAX_RATING,
   MAX_ACTIVE_TASKS,
+  MAX_PROFICIENCY,
   PARTIAL_OVERLAP_GROUPS,
 } from '../config/matchingConfig';
 
@@ -42,6 +44,53 @@ function safeScore(value: number): number {
     return 0;
   }
   return Math.max(0, Math.min(1, value));
+}
+
+// ─── Time Window Helpers ────────────────────────────────────────────────────
+
+/**
+ * Parses an "HH:MM" string into total minutes since midnight.
+ * Returns null if the string is invalid.
+ */
+function parseTimeToMinutes(time: string | undefined): number | null {
+  if (!time) return null;
+  const match = time.trim().match(/^(\d{1,2}):(\d{2})$/);
+  if (!match) return null;
+  const hours = parseInt(match[1], 10);
+  const minutes = parseInt(match[2], 10);
+  if (hours < 0 || hours > 23 || minutes < 0 || minutes > 59) return null;
+  return hours * 60 + minutes;
+}
+
+/**
+ * Computes the overlap ratio between two time windows.
+ * Returns a value between 0 (no overlap) and 1 (full overlap).
+ *
+ * The overlap is measured against the need's window, i.e.:
+ *   overlap_minutes / need_window_minutes
+ */
+function timeWindowOverlap(
+  vStart: string | undefined,
+  vEnd: string | undefined,
+  nStart: string | undefined,
+  nEnd: string | undefined
+): number | null {
+  const vs = parseTimeToMinutes(vStart);
+  const ve = parseTimeToMinutes(vEnd);
+  const ns = parseTimeToMinutes(nStart);
+  const ne = parseTimeToMinutes(nEnd);
+
+  // If any value is missing, return null (use keyword fallback)
+  if (vs === null || ve === null || ns === null || ne === null) return null;
+
+  const needWindow = ne - ns;
+  if (needWindow <= 0) return null;
+
+  const overlapStart = Math.max(vs, ns);
+  const overlapEnd = Math.min(ve, ne);
+  const overlap = Math.max(0, overlapEnd - overlapStart);
+
+  return overlap / needWindow;
 }
 
 // ─── Hard Filter ─────────────────────────────────────────────────────────────
@@ -66,8 +115,17 @@ export function shouldConsider(volunteer: Volunteer, need: Need): boolean {
   // 2. Workload cap
   if ((volunteer.activeTaskCount ?? 0) >= MAX_ACTIVE_TASKS) return false;
 
-  // 3. Availability hard reject (only when timeframe is specified)
-  if (need.timeframe) {
+  // 3. Time-window hard reject (if structured times provided)
+  const timeOverlap = timeWindowOverlap(
+    volunteer.availStart,
+    volunteer.availEnd,
+    need.timeframeStart,
+    need.timeframeEnd
+  );
+  if (timeOverlap !== null && timeOverlap === 0) return false;
+
+  // 4. Keyword availability hard reject (only when timeframe is specified)
+  if (need.timeframe && timeOverlap === null) {
     const vol = (volunteer.availability ?? '').toLowerCase().trim();
     const nTime = need.timeframe.toLowerCase().trim();
 
@@ -89,7 +147,7 @@ export function shouldConsider(volunteer: Volunteer, need: Need): boolean {
  * Skills match score with priority weighting and optional proficiency levels.
  *
  * If `skillLevels` is provided, each matched skill is weighted by its
- * proficiency level (1–3), normalised against the max level (3).
+ * proficiency level (1–MAX_PROFICIENCY), normalised against MAX_PROFICIENCY.
  */
 export function skillsScore(
   volunteerSkills: string[] = [],
@@ -130,9 +188,9 @@ export function skillsScore(
       matchedSkills.reduce((sum, skill) => {
         // Try original case and lowered case
         const level = skillLevels[skill] ?? skillLevels[(skill ?? '').toLowerCase()] ?? 1;
-        return sum + level;
+        return sum + Math.min(level, MAX_PROFICIENCY);
       }, 0) / matchedSkills.length;
-    proficiencyBonus = (avgProficiency / 3) * 0.1; // Up to +0.1 bonus
+    proficiencyBonus = (avgProficiency / MAX_PROFICIENCY) * 0.1; // Up to +0.1 bonus
   }
 
   const blendedScore = rawRatio * 0.4 + priorityRatio * 0.6 + proficiencyBonus;
@@ -141,32 +199,61 @@ export function skillsScore(
 }
 
 /**
- * Location score — delegates to distanceService.
+ * Location score — delegates to distanceService with optional lat/lng.
  */
 export function locationScore(
   volunteerLocation: string = '',
-  needLocation: string = ''
+  needLocation: string = '',
+  volunteerLat?: number,
+  volunteerLng?: number,
+  needLat?: number,
+  needLng?: number
 ): number {
-  return safeScore(computeLocationScore(volunteerLocation, needLocation));
+  return safeScore(
+    computeLocationScore(
+      volunteerLocation,
+      needLocation,
+      volunteerLat,
+      volunteerLng,
+      needLat,
+      needLng
+    )
+  );
 }
 
 /**
- * Availability matching score using actual timeframe data.
+ * Availability matching score.
+ *
+ * Strategy:
+ *   1. If both parties have time-window data → compute overlap %.
+ *   2. Otherwise → fall back to keyword matching.
  */
 export function availabilityScore(
-  volunteerAvailability: string = '',
-  needTimeframe?: string
+  volunteer: Volunteer,
+  need: Need
 ): number {
-  const vol = (volunteerAvailability ?? '').toLowerCase().trim();
+  // Try time-window overlap first
+  const overlap = timeWindowOverlap(
+    volunteer.availStart,
+    volunteer.availEnd,
+    need.timeframeStart,
+    need.timeframeEnd
+  );
+  if (overlap !== null) {
+    return safeScore(overlap);
+  }
 
-  if (!needTimeframe) return 1.0;
+  // Fall back to keyword matching
+  const vol = (volunteer.availability ?? '').toLowerCase().trim();
+
+  if (!need.timeframe) return 1.0;
   if (vol === 'flexible') return 1.0;
 
-  const need = needTimeframe.toLowerCase().trim();
-  if (vol === need) return 1.0;
+  const nTime = need.timeframe.toLowerCase().trim();
+  if (vol === nTime) return 1.0;
 
   for (const group of PARTIAL_OVERLAP_GROUPS) {
-    if (group.includes(vol) && group.includes(need)) {
+    if (group.includes(vol) && group.includes(nTime)) {
       return 0.5;
     }
   }
@@ -287,8 +374,15 @@ function scoreMatch(
     need.requiredSkills,
     volunteer.skillLevels
   );
-  const location = locationScore(volunteer.location, need.location);
-  const availability = availabilityScore(volunteer.availability, need.timeframe);
+  const location = locationScore(
+    volunteer.location,
+    need.location,
+    volunteer.lat,
+    volunteer.lng,
+    need.lat,
+    need.lng
+  );
+  const availability = availabilityScore(volunteer, need);
   const urgency = urgencyScore(need.urgency);
   const rating = ratingScore(volunteer.rating);
   const workload = workloadScore(volunteer.activeTaskCount);
@@ -333,7 +427,10 @@ function scoreMatch(
  * Generates ranked matches between all available volunteers and unassigned
  * needs.
  *
- * Changes from v2:
+ * Changes from v3:
+ *   - Time-window availability scoring.
+ *   - Coordinate-based location scoring with Haversine.
+ *   - Skill proficiency weighting.
  *   - Uses `shouldConsider()` hard filter to skip impossible pairs.
  *   - Returns ALL qualifying matches (no arbitrary cap).
  *   - Accepts optional `weights` for per-task scoring profiles.
@@ -376,6 +473,9 @@ export function generateMatches(
  * assignment outcomes. Call this after recording feedback.
  *
  * Weights: excellent = 1.0, completed = 0.8, no-show = 0.0
+ *
+ * Uses exponential recency weighting: more recent assignments carry
+ * more influence than older ones.
  */
 export function computeReliability(assignments: Assignment[]): number {
   if (assignments.length === 0) return 0.8; // Neutral default
@@ -386,15 +486,28 @@ export function computeReliability(assignments: Assignment[]): number {
     'no-show': 0.0,
   };
 
-  let total = 0;
-  let count = 0;
+  // Sort by timestamp ascending (oldest first)
+  const sorted = [...assignments]
+    .filter((a) => a.outcome)
+    .sort((a, b) => {
+      const ta = a.timestamp ? new Date(a.timestamp).getTime() : 0;
+      const tb = b.timestamp ? new Date(b.timestamp).getTime() : 0;
+      return ta - tb;
+    });
 
-  for (const a of assignments) {
-    if (a.outcome) {
-      total += outcomeWeight[a.outcome] ?? 0.5;
-      count++;
-    }
+  if (sorted.length === 0) return 0.8;
+
+  // Exponential recency factor — recent outcomes weigh more
+  const DECAY = 0.85;
+  let weightedSum = 0;
+  let weightSum = 0;
+
+  for (let i = 0; i < sorted.length; i++) {
+    const recencyWeight = Math.pow(DECAY, sorted.length - 1 - i);
+    const score = outcomeWeight[sorted[i].outcome!] ?? 0.5;
+    weightedSum += score * recencyWeight;
+    weightSum += recencyWeight;
   }
 
-  return count > 0 ? total / count : 0.8;
+  return weightSum > 0 ? weightedSum / weightSum : 0.8;
 }

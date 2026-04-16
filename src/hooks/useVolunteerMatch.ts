@@ -1,6 +1,6 @@
 import { useState, useMemo, useCallback, useRef } from 'react';
-import type { Volunteer, Need, Match, Assignment } from '../types';
-import { generateMatches } from '../utils/matching';
+import type { Volunteer, Need, Match, Assignment, AssignmentOutcome } from '../types';
+import { generateMatches, computeReliability } from '../utils/matching';
 import {
   sortMatches,
   enrichMatch,
@@ -45,6 +45,7 @@ interface UseVolunteerMatchReturn {
   handleExport: () => void;
   handleLoadScenario: (volunteers: Volunteer[], needs: Need[]) => void;
   handleReset: () => void;
+  handleRecordOutcome: (assignmentId: string, outcome: AssignmentOutcome) => void;
   dismissToast: (id: string) => void;
 }
 
@@ -176,10 +177,11 @@ export function useVolunteerMatch(
     [addToast]
   );
 
-  // ── Assignment (FIX: no longer removes volunteer — increments task count) ─
+  // ── Assignment (increments task count — never removes volunteer) ──────────
 
   const handleAssign = useCallback(
     (match: Match) => {
+      const now = new Date();
       const newAssignment: Assignment = {
         id: uid(),
         volunteerId: match.volunteer.id,
@@ -189,7 +191,8 @@ export function useVolunteerMatch(
         needTitle: match.need.title,
         location: match.need.location,
         matchScore: match.score,
-        assignedAt: new Date().toLocaleString(),
+        assignedAt: now.toLocaleString(),
+        timestamp: now.toISOString(),
       };
 
       setAssignments((prev) => [...prev, newAssignment]);
@@ -218,7 +221,7 @@ export function useVolunteerMatch(
     [addToast]
   );
 
-  // ── Auto-Assign (uses config threshold) ───────────────────────────────────
+  // ── Auto-Assign (uses Hungarian algorithm via matchInsights) ──────────────
 
   const handleAutoAssign = useCallback(() => {
     const toAssign = autoAssignMatches(topMatches, AUTO_ASSIGN_MIN_SCORE);
@@ -227,6 +230,7 @@ export function useVolunteerMatch(
       return;
     }
 
+    const now = new Date();
     const newAssignments: Assignment[] = [];
     const taskIncrements = new Map<string, number>();
     const assignedNeedIds = new Set<string>();
@@ -241,7 +245,8 @@ export function useVolunteerMatch(
         needTitle: match.need.title,
         location: match.need.location,
         matchScore: match.score,
-        assignedAt: new Date().toLocaleString(),
+        assignedAt: now.toLocaleString(),
+        timestamp: now.toISOString(),
       });
       taskIncrements.set(
         match.volunteer.id,
@@ -269,10 +274,45 @@ export function useVolunteerMatch(
     );
 
     addToast(
-      `Auto-assigned ${toAssign.length} volunteer${toAssign.length !== 1 ? 's' : ''} successfully`,
+      `Auto-assigned ${toAssign.length} volunteer${toAssign.length !== 1 ? 's' : ''} (Hungarian optimal)`,
       'success'
     );
   }, [topMatches, addToast]);
+
+  // ── Feedback Loop: Record Outcome ─────────────────────────────────────────
+
+  const handleRecordOutcome = useCallback(
+    (assignmentId: string, outcome: AssignmentOutcome) => {
+      setAssignments((prev) => {
+        const updated = prev.map((a) =>
+          a.id === assignmentId ? { ...a, outcome } : a
+        );
+
+        // Recompute reliability scores for all affected volunteers
+        const affectedAssignment = updated.find((a) => a.id === assignmentId);
+        if (affectedAssignment) {
+          const volunteerId = affectedAssignment.volunteerId;
+          const volunteerAssignments = updated.filter(
+            (a) => a.volunteerId === volunteerId
+          );
+          const newReliability = computeReliability(volunteerAssignments);
+
+          setVolunteers((vPrev) =>
+            vPrev.map((v) =>
+              v.id === volunteerId
+                ? { ...v, reliabilityScore: newReliability }
+                : v
+            )
+          );
+        }
+
+        return updated;
+      });
+
+      addToast(`Outcome recorded: ${outcome}`, 'success');
+    },
+    [addToast]
+  );
 
   // ── Demo Scenario Loader ──────────────────────────────────────────────────
 
@@ -326,6 +366,7 @@ export function useVolunteerMatch(
     handleExport,
     handleLoadScenario,
     handleReset,
+    handleRecordOutcome,
     dismissToast,
   };
 }

@@ -4,6 +4,10 @@
  * UI-facing intelligence layer. Separated from core scoring logic.
  * Provides: confidence, labeling, reasons, smart sorting, auto-assign,
  * and dashboard insight generators.
+ *
+ * v4 changes:
+ *   - Auto-assign uses Hungarian algorithm for globally optimal assignment.
+ *   - Greedy fallback retained as `greedyAssignMatches` for comparison.
  */
 
 import type {
@@ -16,6 +20,7 @@ import type {
 } from '../types';
 
 import { AUTO_ASSIGN_MIN_SCORE } from '../config/matchingConfig';
+import { hungarianAssign } from '../services/hungarianService';
 
 // ─── Confidence System ──────────────────────────────────────────────────────
 
@@ -108,16 +113,40 @@ export function sortMatches(matches: Match[]): Match[] {
   });
 }
 
-// ─── Auto-Assign (Greedy) ───────────────────────────────────────────────────
+// ─── Auto-Assign (Hungarian — Globally Optimal) ─────────────────────────────
 
 /**
- * Greedy one-to-one auto-assignment.
+ * Globally optimal auto-assignment using the Hungarian algorithm.
  *
  * Uses `AUTO_ASSIGN_MIN_SCORE` from config as the threshold.
- * Skips already-busy volunteers (checked via activeTaskCount in the match
- * data) and already-assigned needs.
+ * Guarantees no duplicate volunteer or need assignment.
+ *
+ * Falls back to greedy if the Hungarian result is empty but greedy would
+ * produce results (shouldn't happen in practice).
  */
 export function autoAssignMatches(
+  matches: Match[],
+  threshold: number = AUTO_ASSIGN_MIN_SCORE
+): Match[] {
+  const result = hungarianAssign(matches, threshold);
+
+  // Fallback: if Hungarian produced nothing, try greedy
+  if (result.length === 0) {
+    return greedyAssignMatches(matches, threshold);
+  }
+
+  return result;
+}
+
+// ─── Greedy Fallback (retained for comparison / testing) ────────────────────
+
+/**
+ * Greedy one-to-one auto-assignment (legacy approach).
+ *
+ * Iterates sorted matches top-down, assigning the first available
+ * volunteer-need pair. Suboptimal globally but fast.
+ */
+export function greedyAssignMatches(
   matches: Match[],
   threshold: number = AUTO_ASSIGN_MIN_SCORE
 ): Match[] {
