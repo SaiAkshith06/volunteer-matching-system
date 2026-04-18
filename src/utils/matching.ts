@@ -182,7 +182,7 @@ export function skillsScore(
     totalRequiredPriority > 0 ? matchedPriority / totalRequiredPriority : 0;
 
   // Proficiency bonus (if skill levels available)
-  let proficiencyMultiplier = 1;
+  let proficiencyFactor = 1;
   if (skillLevels && matchedSkills.length > 0) {
     const avgProficiency =
       matchedSkills.reduce((sum, skill) => {
@@ -190,10 +190,11 @@ export function skillsScore(
         const level = skillLevels[skill] ?? skillLevels[(skill ?? '').toLowerCase()] ?? 1;
         return sum + Math.min(level, MAX_PROFICIENCY);
       }, 0) / matchedSkills.length;
-    proficiencyMultiplier = avgProficiency / MAX_PROFICIENCY;
+    proficiencyFactor = avgProficiency / MAX_PROFICIENCY;
   }
 
-  const blendedScore = (rawRatio * 0.4 + priorityRatio * 0.6) * proficiencyMultiplier;
+  const baseScore = rawRatio * 0.4 + priorityRatio * 0.6;
+  const blendedScore = baseScore * (0.8 + 0.2 * proficiencyFactor);
 
   return safeScore(blendedScore);
 }
@@ -520,7 +521,7 @@ export function generateMatches(
  * more influence than older ones.
  */
 export function computeReliability(assignments: Assignment[]): number {
-  if (assignments.length === 0) return 0.8; // Neutral default
+  if (assignments.length === 0) return 0.5; // Neutral default
 
   const outcomeWeight: Record<string, number> = {
     excellent: 1.0,
@@ -537,7 +538,7 @@ export function computeReliability(assignments: Assignment[]): number {
       return ta - tb;
     });
 
-  if (sorted.length === 0) return 0.8;
+  if (sorted.length === 0) return 0.5;
 
   // Exponential recency factor — recent outcomes weigh more
   const DECAY = 0.85;
@@ -551,5 +552,5 @@ export function computeReliability(assignments: Assignment[]): number {
     weightSum += recencyWeight;
   }
 
-  return weightSum > 0 ? weightedSum / weightSum : 0.8;
+  return weightSum > 0 ? weightedSum / weightSum : 0.5;
 }

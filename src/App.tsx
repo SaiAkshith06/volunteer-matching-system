@@ -34,7 +34,7 @@ import {
 import { useState } from 'react';
 
 function App() {
-  const [matchSort, setMatchSort] = useState<'score' | 'urgency'>('score');
+  const [matchSort, setMatchSort] = useState<'score' | 'urgency' | 'skills'>('score');
   const [matchFilter, setMatchFilter] = useState<'all' | 'high_urgency' | 'high_score'>('all');
 
   const {
@@ -83,7 +83,7 @@ function App() {
     if (!hasSkillMatch) reasons.push('No required skills match current needs');
     
     // Use proper textLocationScore instead of naive string matching
-    const hasLocationMatch = activeNeeds.some(n => textLocationScore(volunteer.location, n.location) > 0);
+    const hasLocationMatch = activeNeeds.some(n => textLocationScore(volunteer.location, n.location) > 0.3);
     if (!hasLocationMatch) reasons.push('Location mismatch with current needs');
 
     // If none of the above, just general mismatch
@@ -193,11 +193,12 @@ function App() {
             <div className="flex items-center gap-3 bg-white p-1.5 rounded-lg border border-slate-200 shadow-sm">
               <select
                 value={matchSort}
-                onChange={(e) => setMatchSort(e.target.value as 'score' | 'urgency')}
+                onChange={(e) => setMatchSort(e.target.value as 'score' | 'urgency' | 'skills')}
                 className="text-xs text-slate-600 bg-transparent border-none focus:ring-0 cursor-pointer w-24 pl-2"
               >
                 <option value="score">Sort: Score</option>
                 <option value="urgency">Sort: Urgency</option>
+                <option value="skills">Sort: Skills</option>
               </select>
               <div className="w-px h-4 bg-slate-200" />
               <select
@@ -216,7 +217,15 @@ function App() {
             <div className="grid grid-cols-1 md:grid-cols-2 xl:grid-cols-3 gap-5">
               {topMatches
                 .filter(m => matchFilter === 'all' || (matchFilter === 'high_urgency' && m.need.urgency === 'High') || (matchFilter === 'high_score' && m.score > 80))
-                .sort((a, b) => matchSort === 'score' ? b.score - a.score : (b.need.urgency === 'High' ? 1 : -1) - (a.need.urgency === 'High' ? 1 : -1))
+                .sort((a, b) => {
+                  if (matchSort === 'score') return b.score - a.score;
+                  if (matchSort === 'urgency') {
+                    const urgencyWeight: Record<string, number> = { High: 3, Medium: 2, Low: 1 };
+                    return (urgencyWeight[b.need.urgency] || 0) - (urgencyWeight[a.need.urgency] || 0);
+                  }
+                  if (matchSort === 'skills') return b.breakdown.skills - a.breakdown.skills;
+                  return 0;
+                })
                 .map((match, index) => (
                 <MatchCard
                   key={match.id}
