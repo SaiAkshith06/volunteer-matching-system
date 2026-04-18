@@ -71,10 +71,11 @@ const DemoControls: React.FC<DemoControlsProps> = ({
         <button
           onClick={onAutoAssign}
           disabled={isLoading || matchCount === 0}
-          className="flex items-center gap-2 px-4 py-2.5 bg-gradient-to-r from-emerald-500 to-teal-500 hover:from-emerald-600 hover:to-teal-600 text-white text-xs font-bold rounded-xl transition-all duration-200 shadow-sm hover:shadow-md active:scale-[0.98] disabled:opacity-50 disabled:cursor-not-allowed"
+          className="flex items-center gap-2 px-4 py-2.5 bg-gradient-to-r from-emerald-500 to-teal-500 hover:from-emerald-600 hover:to-teal-600 text-white text-xs font-bold rounded-xl transition-all duration-200 shadow-sm hover:shadow-md active:scale-[0.98] disabled:opacity-50 disabled:cursor-not-allowed group relative overflow-hidden"
         >
-          <Zap size={14} />
-          Auto-Assign Top Matches
+          <div className="absolute inset-0 w-full h-full bg-white/20 -translate-x-full group-hover:animate-[shimmer_1.5s_infinite]" />
+          <Zap size={14} className="relative z-10 group-hover:scale-110 transition-transform" />
+          <span className="relative z-10">Auto Assign Optimal Matches</span>
         </button>
 
         {/* Reset */}

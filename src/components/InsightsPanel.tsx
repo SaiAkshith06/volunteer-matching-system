@@ -10,14 +10,14 @@ interface InsightsPanelProps {
   coverageRate: number;
   idleVolunteers: number;
   urgentNeedsPending: number;
-  totalMatches: number;
+  averageMatchScore: number;
 }
 
 const InsightsPanel: React.FC<InsightsPanelProps> = ({
   coverageRate,
   idleVolunteers,
   urgentNeedsPending,
-  totalMatches,
+  averageMatchScore,
 }) => {
   return (
     <div className="mb-8">
@@ -61,15 +61,15 @@ const InsightsPanel: React.FC<InsightsPanelProps> = ({
           <p className="text-[11px] font-medium text-rose-600 mt-0.5">Urgent Pending</p>
         </div>
 
-        {/* Total Match Pairs */}
+        {/* Average Match Score */}
         <div className="bg-gradient-to-br from-violet-50 to-purple-50 p-4 rounded-2xl border border-violet-100 hover:shadow-md transition-shadow">
           <div className="flex items-center gap-2 mb-2">
             <div className="w-8 h-8 rounded-lg bg-violet-100 flex items-center justify-center text-violet-600">
               <Activity size={16} />
             </div>
           </div>
-          <p className="text-2xl font-extrabold text-violet-700">{totalMatches}</p>
-          <p className="text-[11px] font-medium text-violet-600 mt-0.5">Match Pairs</p>
+          <p className="text-2xl font-extrabold text-violet-700">{averageMatchScore}%</p>
+          <p className="text-[11px] font-medium text-violet-600 mt-0.5">Average Match Score</p>
         </div>
       </div>
     </div>

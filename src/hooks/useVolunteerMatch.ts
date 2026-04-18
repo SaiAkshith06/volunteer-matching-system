@@ -36,6 +36,7 @@ interface UseVolunteerMatchReturn {
   coverageRate: number;
   idleVolunteerCount: number;
   urgentPendingCount: number;
+  averageMatchScore: number;
 
   // Actions
   handleVolunteerCsvUpload: (file: File) => Promise<void>;
@@ -118,6 +119,12 @@ export function useVolunteerMatch(
     () => getUrgentNeedsPending(needs),
     [needs]
   );
+
+  const averageMatchScore = useMemo(() => {
+    if (topMatches.length === 0) return 0;
+    const sum = topMatches.reduce((acc, match) => acc + match.score, 0);
+    return Math.round(sum / topMatches.length);
+  }, [topMatches]);
 
   // ── CSV Upload Handlers ───────────────────────────────────────────────────
 
@@ -359,6 +366,7 @@ export function useVolunteerMatch(
     coverageRate,
     idleVolunteerCount,
     urgentPendingCount,
+    averageMatchScore,
     handleVolunteerCsvUpload,
     handleNeedsCsvUpload,
     handleAssign,

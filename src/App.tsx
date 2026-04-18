@@ -40,6 +40,7 @@ function App() {
     coverageRate,
     idleVolunteerCount,
     urgentPendingCount,
+    averageMatchScore,
     handleVolunteerCsvUpload,
     handleNeedsCsvUpload,
     handleAssign,
@@ -65,6 +66,22 @@ function App() {
         handleLoadScenario(medicalVolunteers, medicalNeeds);
         break;
     }
+  };
+
+  const getUnmatchedReasons = (volunteer: typeof volunteers[0]) => {
+    if (activeNeeds.length === 0) return ['No active needs in the system'];
+    const reasons: string[] = [];
+    const hasSkillMatch = activeNeeds.some(n => n.requiredSkills.some(s => volunteer.skills.includes(s)));
+    if (!hasSkillMatch) reasons.push('No required skills match current needs');
+    
+    // For string locations standard text match, fallback logic
+    const hasLocationMatch = activeNeeds.some(n => n.location.includes(volunteer.location) || volunteer.location.includes(n.location));
+    if (!hasLocationMatch) reasons.push('Location mismatch with current needs');
+
+    // If none of the above, just general mismatch
+    if (reasons.length === 0) reasons.push('Availability or rating does not meet current thresholds');
+    
+    return reasons;
   };
 
   return (
@@ -140,7 +157,7 @@ function App() {
           coverageRate={coverageRate}
           idleVolunteers={idleVolunteerCount}
           urgentNeedsPending={urgentPendingCount}
-          totalMatches={topMatches.length}
+          averageMatchScore={averageMatchScore}
         />
 
         {/* ─── Before vs After Comparison ──────────────────────────────────── */}
@@ -199,9 +216,18 @@ function App() {
             </div>
             <div className="space-y-4">
               {volunteers.length > 0 ? (
-                volunteers.map((v) => (
-                  <VolunteerCard key={v.id} volunteer={v} />
-                ))
+                volunteers.map((v) => {
+                  const isMatched = topMatches.some(m => m.volunteer.id === v.id);
+                  const hasNoMatches = !isMatched && !v.activeTaskCount;
+                  return (
+                    <VolunteerCard 
+                      key={v.id} 
+                      volunteer={v} 
+                      hasNoMatches={hasNoMatches}
+                      unmatchedReasons={hasNoMatches ? getUnmatchedReasons(v) : []}
+                    />
+                  );
+                })
               ) : (
                 <div className="bg-white rounded-2xl border border-slate-100">
                   <EmptyState

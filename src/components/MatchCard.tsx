@@ -16,6 +16,7 @@ import {
   getMatchLabel,
   generateMatchReasons,
 } from '../utils/matchInsights';
+import { ScoreBreakdown } from './ScoreBreakdown';
 
 interface MatchCardProps {
   match: Match;
@@ -214,77 +215,11 @@ const MatchCard: React.FC<MatchCardProps> = ({
 
         {/* Expandable Breakdown */}
         {match.breakdown && (
-          <div className="mb-4">
-            <button
-              onClick={() => setShowBreakdown(!showBreakdown)}
-              className="flex items-center gap-1 text-[10px] font-semibold text-slate-400 hover:text-slate-600 transition-colors mb-1.5"
-              aria-expanded={showBreakdown}
-            >
-              <ChevronDown
-                size={12}
-                className={`transition-transform duration-200 ${
-                  showBreakdown ? 'rotate-180' : ''
-                }`}
-              />
-              {showBreakdown ? 'Hide Breakdown' : 'View Breakdown'}
-            </button>
-            {showBreakdown && (
-              <div className="bg-slate-50 p-2.5 rounded-xl border border-slate-100 grid grid-cols-3 gap-1 text-[10px] font-semibold text-slate-500 animate-fadeIn">
-                <div className="flex flex-col items-center py-1">
-                  <span className="text-slate-400 uppercase text-[8px] mb-0.5">
-                    Skills
-                  </span>
-                  <span className="text-slate-700">
-                    {Math.round(match.breakdown.skills * 100)}%
-                  </span>
-                </div>
-                <div className="flex flex-col items-center py-1">
-                  <span className="text-slate-400 uppercase text-[8px] mb-0.5">
-                    Location
-                  </span>
-                  <span className="text-slate-700">
-                    {Math.round(match.breakdown.location * 100)}%
-                  </span>
-                </div>
-                <div className="flex flex-col items-center py-1">
-                  <span className="text-slate-400 uppercase text-[8px] mb-0.5">
-                    Time
-                  </span>
-                  <span className="text-slate-700">
-                    {Math.round(match.breakdown.availability * 100)}%
-                  </span>
-                </div>
-                <div className="flex flex-col items-center py-1">
-                  <span className="text-slate-400 uppercase text-[8px] mb-0.5">
-                    Urgency
-                  </span>
-                  <span className="text-slate-700">
-                    {Math.round(match.breakdown.urgency * 100)}%
-                  </span>
-                </div>
-                {match.breakdown.rating !== undefined && (
-                  <div className="flex flex-col items-center py-1">
-                    <span className="text-slate-400 uppercase text-[8px] mb-0.5">
-                      Rating
-                    </span>
-                    <span className="text-slate-700">
-                      {Math.round(match.breakdown.rating * 100)}%
-                    </span>
-                  </div>
-                )}
-                {match.breakdown.workload !== undefined && (
-                  <div className="flex flex-col items-center py-1">
-                    <span className="text-slate-400 uppercase text-[8px] mb-0.5">
-                      Workload
-                    </span>
-                    <span className="text-slate-700">
-                      {Math.round(match.breakdown.workload * 100)}%
-                    </span>
-                  </div>
-                )}
-              </div>
-            )}
-          </div>
+          <ScoreBreakdown 
+            breakdown={match.breakdown} 
+            show={showBreakdown} 
+            onToggle={() => setShowBreakdown(!showBreakdown)} 
+          />
         )}
 
         {/* Assign Button */}
