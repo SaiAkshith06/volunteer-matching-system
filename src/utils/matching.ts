@@ -182,7 +182,7 @@ export function skillsScore(
     totalRequiredPriority > 0 ? matchedPriority / totalRequiredPriority : 0;
 
   // Proficiency bonus (if skill levels available)
-  let proficiencyBonus = 0;
+  let proficiencyMultiplier = 1;
   if (skillLevels && matchedSkills.length > 0) {
     const avgProficiency =
       matchedSkills.reduce((sum, skill) => {
@@ -190,10 +190,10 @@ export function skillsScore(
         const level = skillLevels[skill] ?? skillLevels[(skill ?? '').toLowerCase()] ?? 1;
         return sum + Math.min(level, MAX_PROFICIENCY);
       }, 0) / matchedSkills.length;
-    proficiencyBonus = (avgProficiency / MAX_PROFICIENCY) * 0.1; // Up to +0.1 bonus
+    proficiencyMultiplier = avgProficiency / MAX_PROFICIENCY;
   }
 
-  const blendedScore = rawRatio * 0.4 + priorityRatio * 0.6 + proficiencyBonus;
+  const blendedScore = (rawRatio * 0.4 + priorityRatio * 0.6) * proficiencyMultiplier;
 
   return safeScore(blendedScore);
 }
@@ -325,7 +325,7 @@ export function workloadScore(activeTaskCount: number): number {
  * for volunteers with no history.
  */
 export function reliabilityScore(volunteer: Volunteer): number {
-  return safeScore(volunteer.reliabilityScore ?? 0.8);
+  return safeScore(volunteer.reliabilityScore ?? 0.5);
 }
 
 // ─── Reason Builder ──────────────────────────────────────────────────────────

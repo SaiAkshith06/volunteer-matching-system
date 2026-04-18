@@ -9,8 +9,10 @@ import ToastContainer from './components/ToastContainer';
 import InsightsPanel from './components/InsightsPanel';
 import DemoControls from './components/DemoControls';
 import ComparisonPanel from './components/ComparisonPanel';
+import AssignmentsList from './components/AssignmentsList';
 import { useVolunteerMatch } from './hooks/useVolunteerMatch';
 import { mockVolunteers, mockNeeds } from './data/mockData';
+import { textLocationScore } from './services/distanceService';
 import {
   floodVolunteers,
   floodNeeds,
@@ -29,7 +31,12 @@ import {
   Target,
 } from 'lucide-react';
 
+import { useState } from 'react';
+
 function App() {
+  const [matchSort, setMatchSort] = useState<'score' | 'urgency'>('score');
+  const [matchFilter, setMatchFilter] = useState<'all' | 'high_urgency' | 'high_score'>('all');
+
   const {
     volunteers,
     needs,
@@ -48,6 +55,7 @@ function App() {
     handleExport,
     handleLoadScenario,
     handleReset,
+    handleRecordOutcome,
     dismissToast,
   } = useVolunteerMatch(mockVolunteers, mockNeeds);
 
@@ -74,8 +82,8 @@ function App() {
     const hasSkillMatch = activeNeeds.some(n => n.requiredSkills.some(s => volunteer.skills.includes(s)));
     if (!hasSkillMatch) reasons.push('No required skills match current needs');
     
-    // For string locations standard text match, fallback logic
-    const hasLocationMatch = activeNeeds.some(n => n.location.includes(volunteer.location) || volunteer.location.includes(n.location));
+    // Use proper textLocationScore instead of naive string matching
+    const hasLocationMatch = activeNeeds.some(n => textLocationScore(volunteer.location, n.location) > 0);
     if (!hasLocationMatch) reasons.push('Location mismatch with current needs');
 
     // If none of the above, just general mismatch
@@ -160,26 +168,56 @@ function App() {
           averageMatchScore={averageMatchScore}
         />
 
+        {/* ─── Assignments Panel ───────────────────────────────────────────── */}
+        <AssignmentsList assignments={assignments} onRecordOutcome={handleRecordOutcome} />
+
         {/* ─── Before vs After Comparison ──────────────────────────────────── */}
         <ComparisonPanel />
 
         {/* ─── Top Recommended Matches ─────────────────────────────────────── */}
         <section className="mb-12">
-          <div className="flex items-center gap-2 mb-6">
-            <div className="p-2 bg-violet-100 text-violet-600 rounded-lg">
-              <Target size={20} />
+          <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4 mb-6">
+            <div className="flex items-center gap-2">
+              <div className="p-2 bg-violet-100 text-violet-600 rounded-lg">
+                <Target size={20} />
+              </div>
+              <h2 className="text-xl font-bold text-slate-900">
+                Top Recommended Matches
+              </h2>
+              <span className="ml-auto text-xs font-medium text-slate-400 bg-slate-100 px-2 py-0.5 rounded-full">
+                {topMatches.length} match{topMatches.length !== 1 ? 'es' : ''}
+              </span>
             </div>
-            <h2 className="text-xl font-bold text-slate-900">
-              Top Recommended Matches
-            </h2>
-            <span className="ml-auto text-xs font-medium text-slate-400 bg-slate-100 px-2 py-0.5 rounded-full">
-              {topMatches.length} match{topMatches.length !== 1 ? 'es' : ''}
-            </span>
+
+            {/* Match Controls (Part 4.3) */}
+            <div className="flex items-center gap-3 bg-white p-1.5 rounded-lg border border-slate-200 shadow-sm">
+              <select
+                value={matchSort}
+                onChange={(e) => setMatchSort(e.target.value as 'score' | 'urgency')}
+                className="text-xs text-slate-600 bg-transparent border-none focus:ring-0 cursor-pointer w-24 pl-2"
+              >
+                <option value="score">Sort: Score</option>
+                <option value="urgency">Sort: Urgency</option>
+              </select>
+              <div className="w-px h-4 bg-slate-200" />
+              <select
+                value={matchFilter}
+                onChange={(e) => setMatchFilter(e.target.value as 'all' | 'high_urgency' | 'high_score')}
+                className="text-xs text-slate-600 bg-transparent border-none focus:ring-0 cursor-pointer pl-2"
+              >
+                <option value="all">Filter: All</option>
+                <option value="high_urgency">Filter: High Urgency</option>
+                <option value="high_score">Filter: Score &gt; 80</option>
+              </select>
+            </div>
           </div>
 
           {topMatches.length > 0 ? (
             <div className="grid grid-cols-1 md:grid-cols-2 xl:grid-cols-3 gap-5">
-              {topMatches.map((match, index) => (
+              {topMatches
+                .filter(m => matchFilter === 'all' || (matchFilter === 'high_urgency' && m.need.urgency === 'High') || (matchFilter === 'high_score' && m.score > 80))
+                .sort((a, b) => matchSort === 'score' ? b.score - a.score : (b.need.urgency === 'High' ? 1 : -1) - (a.need.urgency === 'High' ? 1 : -1))
+                .map((match, index) => (
                 <MatchCard
                   key={match.id}
                   match={match}

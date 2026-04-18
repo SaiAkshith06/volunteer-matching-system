@@ -11,7 +11,7 @@ import {
 } from '../utils/matchInsights';
 import { parseVolunteersCsv, parseNeedsCsv } from '../utils/csvParser';
 import { exportAssignmentsCsv } from '../utils/exportCsv';
-import { AUTO_ASSIGN_MIN_SCORE } from '../config/matchingConfig';
+import { AUTO_ASSIGN_MIN_SCORE, EMERGENCY_WEIGHTS, DEFAULT_WEIGHTS } from '../config/matchingConfig';
 
 // ─── Toast Notification ──────────────────────────────────────────────────────
 
@@ -98,7 +98,10 @@ export function useVolunteerMatch(
   // ── Memoized matches with Layer 2 enrichment ──────────────────────────────
 
   const topMatches = useMemo(() => {
-    const rawMatches = generateMatches(volunteers, needs);
+    const hasEmergency = needs.some((n) => n.urgency === 'High' && !n.isAssigned);
+    const weights = hasEmergency ? EMERGENCY_WEIGHTS : DEFAULT_WEIGHTS;
+
+    const rawMatches = generateMatches(volunteers, needs, weights);
     const sorted = sortMatches(rawMatches);
     return sorted.map(enrichMatch);
   }, [volunteers, needs]);
@@ -213,11 +216,17 @@ export function useVolunteerMatch(
         )
       );
 
-      // Mark need as assigned
+      // Increment need assignedCount and mark assigned only if team filled
       setNeeds((prev) =>
-        prev.map((n) =>
-          n.id === match.need.id ? { ...n, isAssigned: true } : n
-        )
+        prev.map((n) => {
+          if (n.id === match.need.id) {
+            const currentObj = n as Need & { assignedCount?: number };
+            const newCount = (currentObj.assignedCount ?? 0) + 1;
+            const requiredSize = n.teamSizeNeeded ?? 1;
+            return { ...n, assignedCount: newCount, isAssigned: newCount >= requiredSize };
+          }
+          return n;
+        })
       );
 
       addToast(
@@ -264,6 +273,11 @@ export function useVolunteerMatch(
 
     setAssignments((prev) => [...prev, ...newAssignments]);
 
+    addToast(
+      `Auto-assigned ${toAssign.length} volunteer${toAssign.length !== 1 ? 's' : ''} (Hungarian optimal)`,
+      'success'
+    );
+
     // Increment task counts (don't remove volunteers)
     setVolunteers((prev) =>
       prev.map((v) => {
@@ -275,14 +289,15 @@ export function useVolunteerMatch(
     );
 
     setNeeds((prev) =>
-      prev.map((n) =>
-        assignedNeedIds.has(n.id) ? { ...n, isAssigned: true } : n
-      )
-    );
-
-    addToast(
-      `Auto-assigned ${toAssign.length} volunteer${toAssign.length !== 1 ? 's' : ''} (Hungarian optimal)`,
-      'success'
+      prev.map((n) => {
+        if (assignedNeedIds.has(n.id)) {
+          const currentObj = n as Need & { assignedCount?: number };
+          const newCount = (currentObj.assignedCount ?? 0) + 1;
+          const requiredSize = n.teamSizeNeeded ?? 1;
+          return { ...n, assignedCount: newCount, isAssigned: newCount >= requiredSize };
+        }
+        return n;
+      })
     );
   }, [topMatches, addToast]);
 

@@ -49,9 +49,25 @@ const NeedCard: React.FC<NeedCardProps> = ({ need }) => {
           <MapPin size={14} className="shrink-0" />
           <span className="text-xs truncate">{need.location}</span>
         </div>
+        {(need.timeframe || (need.timeframeStart && need.timeframeEnd)) && (
+          <div className="flex items-center gap-1.5 text-slate-500">
+            <Calendar size={14} className="shrink-0" />
+            <span className="text-[11px] truncate">
+              {need.timeframe || `${need.timeframeStart} - ${need.timeframeEnd}`}
+            </span>
+          </div>
+        )}
+        {need.deadline && (
+          <div className="flex items-center gap-1.5 text-rose-500">
+            <span className="font-bold text-[10px] shrink-0">DUE</span>
+            <span className="text-[11px]">{new Date(need.deadline).toLocaleDateString()}</span>
+          </div>
+        )}
         <div className="flex items-center gap-1.5 text-slate-400">
-          <Calendar size={14} className="shrink-0" />
-          <span className="text-[11px]">{need.dateAdded}</span>
+          <span className="font-bold text-[10px] shrink-0">TEAM</span>
+          <span className="text-[11px]">
+            {need.assignedCount || 0} / {need.teamSizeNeeded || 1} volunteers
+          </span>
         </div>
       </div>
     </div>

@@ -67,6 +67,8 @@ export interface Need {
   deadline?: string;
   /** Number of volunteers needed for this task (default: 1) */
   teamSizeNeeded?: number;
+  /** Number of volunteers assigned to this task so far */
+  assignedCount?: number;
   dateAdded: string;
   isAssigned: boolean;
 }

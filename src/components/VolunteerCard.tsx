@@ -66,16 +66,25 @@ const VolunteerCard: React.FC<VolunteerCardProps> = ({
                 {volunteer.rating}
               </span>
             </div>
+            <div className="flex items-center gap-0.5">
+              <span className="px-1.5 py-0.5 ml-1 bg-indigo-50 border border-indigo-100 text-indigo-600 rounded text-[9px] font-bold uppercase tracking-wider">
+                Reliability: {Math.round((volunteer.reliabilityScore ?? 0.5) * 100)}%
+              </span>
+            </div>
           </div>
           <div className="flex flex-wrap gap-1.5">
-            {volunteer.skills.map((skill) => (
-              <span
-                key={skill}
-                className={`px-2 py-0.5 rounded-md text-[11px] font-bold ${skillColors[skill] || 'bg-slate-100 text-slate-600'}`}
-              >
-                {skill}
-              </span>
-            ))}
+            {volunteer.skills.map((skill) => {
+              const level = volunteer.skillLevels?.[skill] ?? volunteer.skillLevels?.[skill.toLowerCase()] ?? 1;
+              return (
+                <span
+                  key={skill}
+                  className={`px-2 py-0.5 rounded-md text-[11px] font-bold flex items-center gap-1 ${skillColors[skill] || 'bg-slate-100 text-slate-600'}`}
+                >
+                  {skill} 
+                  <span className="opacity-75 text-[9px]">Lvl {level}</span>
+                </span>
+              );
+            })}
           </div>
         </div>
       </div>

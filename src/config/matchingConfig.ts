@@ -75,8 +75,9 @@ export const MAX_PROFICIENCY = 3;
 // Pairs of time keywords that partially overlap score 0.5
 
 export const PARTIAL_OVERLAP_GROUPS: string[][] = [
-  ['weekdays', 'mornings', 'evenings'],
-  ['weekends', 'mornings', 'evenings'],
+  ['mornings', 'evenings'],
+  ['weekdays', 'flexible'],
+  ['weekends', 'flexible']
 ];
 
 // ─── Distance Configuration ─────────────────────────────────────────────────

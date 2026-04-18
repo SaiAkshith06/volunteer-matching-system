@@ -76,6 +76,13 @@ export const ScoreBreakdown: React.FC<ScoreBreakdownProps> = ({ breakdown, show,
               colorClass="bg-indigo-500" 
             />
           )}
+          {breakdown.reliability !== undefined && (
+            <ProgressBar 
+              label="Reliability" 
+              percentage={Math.round(breakdown.reliability * 100)} 
+              colorClass="bg-teal-500" 
+            />
+          )}
         </div>
       )}
     </div>

@@ -51,8 +51,10 @@ export function coordinateScore(
 ): number {
   const distance = haversineDistanceKm(lat1, lng1, lat2, lng2);
   if (distance <= 0) return 1.0;
-  if (distance >= MAX_DISTANCE_KM) return 0.0;
-  return 1.0 - distance / MAX_DISTANCE_KM;
+  
+  const halfDistanceKm = MAX_DISTANCE_KM / 2;
+  const k = Math.log(2) / halfDistanceKm;
+  return Math.exp(-k * distance);
 }
 
 // ─── Text-Based Score ───────────────────────────────────────────────────────
