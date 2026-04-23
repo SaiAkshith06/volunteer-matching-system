@@ -7,9 +7,12 @@ export default {
   theme: {
     extend: {
       colors: {
-        background: "#f9fafc",
+        background: "#F4F6F5",
         card: "#ffffff",
-      }
+      },
+      fontFamily: {
+        sans: ['Inter', 'system-ui', '-apple-system', 'sans-serif'],
+      },
     },
   },
   plugins: [],

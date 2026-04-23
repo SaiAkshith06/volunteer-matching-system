@@ -1,11 +1,9 @@
 import React from 'react';
-import type { Match } from '../types';
-import type { Urgency } from '../types';
+import type { Match, Urgency } from '../types';
 import {
   Target,
   Zap,
   ChevronRight,
-  ChevronDown,
   CheckCircle2,
   Star,
   Shield,
@@ -25,143 +23,99 @@ interface MatchCardProps {
 }
 
 const urgencyColors: Record<Urgency, string> = {
-  High: 'text-rose-600 bg-rose-50',
-  Medium: 'text-amber-600 bg-amber-50',
-  Low: 'text-emerald-600 bg-emerald-50',
+  High: 'text-[#e76f51] bg-[#fef3f2]',
+  Medium: 'text-[#f4a261] bg-[#fef9f0]',
+  Low: 'text-[#2a9d8f] bg-[#e9f5f3]',
 };
 
-function getScoreColor(score: number): string {
-  if (score >= 90) return 'from-emerald-500 to-emerald-600';
-  if (score >= 75) return 'from-blue-500 to-blue-600';
-  if (score >= 60) return 'from-orange-500 to-orange-600';
-  return 'from-slate-400 to-slate-500';
+function getScoreGradient(score: number): string {
+  if (score >= 90) return 'from-[#2a9d8f] to-[#3ec4b3]';
+  if (score >= 75) return 'from-[#2a9d8f] to-[#4aaf9e]';
+  if (score >= 60) return 'from-[#f4a261] to-[#f4c792]';
+  return 'from-gray-400 to-gray-300';
 }
 
-function getScoreBg(score: number): string {
-  if (score >= 90) return 'bg-emerald-50 border-emerald-200';
-  if (score >= 75) return 'bg-blue-50 border-blue-200';
-  if (score >= 60) return 'bg-orange-50 border-orange-200';
-  return 'bg-slate-50 border-slate-200';
-}
-
-function getScoreRingColor(score: number): string {
-  if (score >= 90) return 'ring-emerald-300';
-  if (score >= 75) return 'ring-blue-300';
-  if (score >= 60) return 'ring-orange-300';
-  return 'ring-slate-300';
-}
-
-function getConfidenceBadgeClasses(conf: 'High' | 'Medium' | 'Low'): string {
+function getConfidenceBadge(conf: 'High' | 'Medium' | 'Low'): string {
   switch (conf) {
-    case 'High':
-      return 'bg-emerald-50 text-emerald-700 border-emerald-200';
-    case 'Medium':
-      return 'bg-blue-50 text-blue-700 border-blue-200';
-    default:
-      return 'bg-slate-50 text-slate-600 border-slate-200';
+    case 'High': return 'bg-[#e9f5f3] text-[#2a9d8f]';
+    case 'Medium': return 'bg-[#fef9f0] text-[#f4a261]';
+    default: return 'bg-gray-100 text-gray-500';
   }
 }
 
-const MatchCard: React.FC<MatchCardProps> = ({
-  match,
-  onAssign,
-  isTopMatch = false,
-}) => {
+const MatchCard: React.FC<MatchCardProps> = ({ match, onAssign, isTopMatch = false }) => {
   const [showBreakdown, setShowBreakdown] = React.useState(false);
 
-  if (!match || !match.volunteer || !match.need) {
-    console.warn('MatchCard: Invalid match data', match);
-    return null;
-  }
+  if (!match?.volunteer || !match?.need) return null;
 
-  const breakdown = match.breakdown || {
-    skills: 0,
-    location: 0,
-    availability: 0,
-    urgency: 0,
-    rating: 0,
-    workload: 0,
-  };
-
+  const breakdown = match.breakdown || { skills: 0, location: 0, availability: 0, urgency: 0, rating: 0, workload: 0 };
   const confidence = getConfidence(match.score);
   const confidenceColor = getConfidenceColor(match.score);
   const label = getMatchLabel(match.score);
   const reasons = generateMatchReasons(breakdown);
 
+  // Circular score indicator
+  const circumference = 2 * Math.PI * 22;
+  const offset = circumference - (match.score / 100) * circumference;
+
   return (
     <div
-      className={`group relative bg-white rounded-2xl border shadow-sm hover:shadow-lg transition-all duration-300 overflow-hidden ${
-        isTopMatch
-          ? 'border-emerald-200 ring-2 ring-emerald-100 shadow-emerald-50'
-          : 'border-slate-100 hover:border-blue-200'
+      className={`warm-card group relative overflow-hidden hover:-translate-y-1 ${
+        isTopMatch ? 'ring-2 ring-[#2a9d8f]/20' : ''
       }`}
     >
-      {/* Top Match Ribbon */}
       {isTopMatch && (
-        <div className="absolute top-0 left-0 right-0 h-1 bg-gradient-to-r from-emerald-400 via-emerald-500 to-teal-500" />
+        <div className="absolute top-0 left-0 right-0 h-1 bg-gradient-to-r from-[#2a9d8f] to-[#3ec4b3]" />
       )}
 
-      {/* Score Badge */}
-      <div className="absolute top-4 right-4 flex flex-col items-end gap-1.5">
-        {/* Confidence Tag */}
-        <span
-          className={`inline-flex items-center gap-1 px-2 py-0.5 rounded-full text-[9px] font-bold uppercase border ${getConfidenceBadgeClasses(
-            confidence
-          )}`}
-        >
+      {/* Score + Confidence (top-right) */}
+      <div className="absolute top-5 right-5 flex flex-col items-end gap-2">
+        <span className={`inline-flex items-center gap-1 px-2.5 py-0.5 rounded-full text-[9px] font-bold uppercase ${getConfidenceBadge(confidence)}`}>
           <Shield size={8} />
           {confidence}
         </span>
-        {/* Score Circle */}
-        <div
-          className={`w-14 h-14 rounded-xl border flex flex-col items-center justify-center shadow-sm ring-2 ${getScoreBg(
-            match.score
-          )} ${getScoreRingColor(match.score)}`}
-        >
-          <span
-            className={`text-lg font-extrabold bg-gradient-to-b ${getScoreColor(
-              match.score
-            )} bg-clip-text text-transparent`}
-          >
-            {match.score}%
-          </span>
-          <span className="text-[8px] font-bold text-slate-500 uppercase tracking-wider">
-            Score
-          </span>
+        {/* Circular score */}
+        <div className="relative w-16 h-16">
+          <svg className="w-16 h-16 -rotate-90" viewBox="0 0 48 48">
+            <circle cx="24" cy="24" r="22" fill="none" stroke="#e8dfcf" strokeWidth="3" />
+            <circle
+              cx="24" cy="24" r="22"
+              fill="none"
+              strokeWidth="3"
+              strokeLinecap="round"
+              className={`transition-all duration-700`}
+              style={{
+                stroke: match.score >= 75 ? '#2a9d8f' : match.score >= 60 ? '#f4a261' : '#9ca3af',
+                strokeDasharray: circumference,
+                strokeDashoffset: offset,
+              }}
+            />
+          </svg>
+          <div className="absolute inset-0 flex flex-col items-center justify-center">
+            <span className="text-sm font-bold text-gray-900">{match.score}%</span>
+          </div>
         </div>
       </div>
 
-      <div className="p-5 pr-24">
-        {/* Match Label */}
+      <div className="p-6 pr-24">
+        {/* Label */}
         <div className="flex items-center gap-1.5 mb-3">
-          <Star
-            size={12}
-            className="text-amber-400"
-            fill="currentColor"
-          />
-          <span
-            className="text-[10px] font-bold uppercase tracking-wider"
-            style={{ color: confidenceColor }}
-          >
+          <Star size={12} className="text-[#f4a261]" fill="currentColor" />
+          <span className="text-[10px] font-bold uppercase tracking-wider" style={{ color: confidenceColor }}>
             {label}
           </span>
         </div>
 
-        {/* Volunteer Info */}
+        {/* Volunteer */}
         <div className="flex items-center gap-3 mb-3">
-          <div className="w-10 h-10 rounded-full bg-blue-50 flex items-center justify-center text-blue-600 font-bold text-sm border border-blue-100">
+          <div className="w-10 h-10 rounded-full bg-[#e9f5f3] flex items-center justify-center text-[#2a9d8f] font-bold text-sm">
             {match.volunteer.avatar}
           </div>
           <div>
-            <h4 className="font-bold text-slate-900 text-sm">
-              {match.volunteer.name}
-            </h4>
+            <h4 className="font-bold text-gray-800 text-sm">{match.volunteer.name}</h4>
             <div className="flex flex-wrap gap-1 mt-0.5">
               {match.volunteer.skills.map((skill) => (
-                <span
-                  key={skill}
-                  className="px-1.5 py-0.5 rounded text-[9px] font-semibold bg-blue-50 text-blue-600"
-                >
+                <span key={skill} className="px-1.5 py-0.5 rounded-full text-[9px] font-semibold bg-[#e9f5f3] text-[#2a9d8f]">
                   {skill}
                 </span>
               ))}
@@ -169,64 +123,41 @@ const MatchCard: React.FC<MatchCardProps> = ({
           </div>
         </div>
 
-        {/* Arrow */}
-        <div className="flex items-center gap-2 mb-3 text-slate-300">
+        <div className="flex items-center gap-2 mb-3 text-gray-300">
           <ChevronRight size={14} />
-          <div className="flex-1 h-px bg-slate-100" />
+          <div className="flex-1 h-px bg-[#e8dfcf]" />
         </div>
 
-        {/* Need Info */}
+        {/* Need */}
         <div className="flex items-start gap-3 mb-3">
-          <div className="w-10 h-10 rounded-full bg-rose-50 flex items-center justify-center text-rose-500 shrink-0 border border-rose-100">
+          <div className="w-10 h-10 rounded-full bg-[#fef3f2] flex items-center justify-center text-[#e76f51] shrink-0">
             <Target size={18} />
           </div>
           <div>
-            <h4 className="font-bold text-slate-900 text-sm leading-tight">
-              {match.need.title}
-            </h4>
-            <span
-              className={`inline-flex items-center gap-0.5 mt-1 px-1.5 py-0.5 rounded text-[9px] font-bold uppercase ${
-                urgencyColors[match.need.urgency]
-              }`}
-            >
+            <h4 className="font-bold text-gray-800 text-sm leading-tight">{match.need.title}</h4>
+            <span className={`inline-flex items-center gap-0.5 mt-1 px-2 py-0.5 rounded-full text-[9px] font-bold uppercase ${urgencyColors[match.need.urgency]}`}>
               <Zap size={8} />
               {match.need.urgency}
             </span>
           </div>
         </div>
 
-        {/* Reasons — the key explainability feature */}
         {reasons.length > 0 && (
-          <div className="space-y-1 mb-3">
+          <div className="space-y-1.5 mb-4">
             {reasons.slice(0, 4).map((reason, i) => (
-              <div
-                key={i}
-                className="flex items-center gap-1.5 text-[11px] text-slate-600"
-              >
-                <CheckCircle2
-                  size={12}
-                  className="text-emerald-500 shrink-0"
-                />
+              <div key={i} className="flex items-center gap-1.5 text-[11px] text-gray-500">
+                <CheckCircle2 size={12} className="text-[#2a9d8f] shrink-0" />
                 <span className="font-medium">{reason}</span>
               </div>
             ))}
           </div>
         )}
 
-        {/* Expandable Breakdown */}
         {match.breakdown && (
-          <ScoreBreakdown 
-            breakdown={match.breakdown} 
-            show={showBreakdown} 
-            onToggle={() => setShowBreakdown(!showBreakdown)} 
-          />
+          <ScoreBreakdown breakdown={match.breakdown} show={showBreakdown} onToggle={() => setShowBreakdown(!showBreakdown)} />
         )}
 
-        {/* Assign Button */}
-        <button
-          onClick={() => onAssign(match)}
-          className="w-full py-2.5 px-4 bg-gradient-to-r from-blue-600 to-indigo-600 hover:from-blue-700 hover:to-indigo-700 text-white text-xs font-bold rounded-xl transition-all duration-200 shadow-sm hover:shadow-md active:scale-[0.98]"
-        >
+        <button onClick={() => onAssign(match)} className="btn-teal w-full">
           Assign Match
         </button>
       </div>

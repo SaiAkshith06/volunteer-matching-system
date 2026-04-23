@@ -99,7 +99,7 @@ export default function MapView({ volunteers, needs, assignments }) {
                                 { lat: need.lat, lng: need.lng },
                             ]}
                             options={{
-                                strokeColor: "#2563eb",
+                                strokeColor: "#2a9d8f",
                                 strokeOpacity: 0.8,
                                 strokeWeight: 3,
                             }}

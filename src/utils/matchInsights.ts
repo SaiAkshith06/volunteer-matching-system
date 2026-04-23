@@ -34,11 +34,11 @@ export function getConfidenceColor(score: number): string {
   const confidence = getConfidence(score);
   switch (confidence) {
     case 'High':
-      return '#10b981';
+      return '#2a9d8f';
     case 'Medium':
-      return '#3b82f6';
+      return '#f4a261';
     default:
-      return '#94a3b8';
+      return '#9ca3af';
   }
 }
 

@@ -8,46 +8,46 @@ interface AssignmentsListProps {
 }
 
 const outcomeColors = {
-  completed: 'bg-emerald-100 text-emerald-700',
-  'no-show': 'bg-rose-100 text-rose-700',
-  excellent: 'bg-amber-100 text-amber-700',
+  completed: 'bg-[#e9f5f3] text-[#2a9d8f]',
+  'no-show': 'bg-[#fef3f2] text-[#e76f51]',
+  excellent: 'bg-[#fef9f0] text-[#f4a261]',
 };
 
 const AssignmentsList: React.FC<AssignmentsListProps> = ({ assignments, onRecordOutcome }) => {
   if (assignments.length === 0) return null;
 
   return (
-    <div className="mb-12">
-      <div className="flex items-center gap-2 mb-6">
-        <div className="p-2 bg-indigo-100 text-indigo-600 rounded-lg">
-          <Clock size={20} />
+    <div className="mb-10">
+      <h2 className="text-lg font-bold text-gray-800 tracking-tight mb-5 flex items-center gap-2">
+        <div className="w-8 h-8 rounded-full bg-[#e9f5f3] text-[#2a9d8f] flex items-center justify-center">
+          <Clock size={14} />
         </div>
-        <h2 className="text-xl font-bold text-slate-900">Recent Assignments</h2>
-      </div>
+        Recent Assignments
+      </h2>
 
-      <div className="bg-white rounded-2xl border border-slate-200 overflow-hidden shadow-sm">
+      <div className="warm-card overflow-hidden !p-0">
         <div className="overflow-x-auto">
-          <table className="w-full text-left text-sm text-slate-600">
-            <thead className="bg-slate-50 text-xs uppercase text-slate-500 font-bold border-b border-slate-200">
+          <table className="w-full text-left text-sm text-gray-600">
+            <thead className="bg-[#f8f4ec]/60 text-xs uppercase text-gray-400 font-bold">
               <tr>
                 <th className="px-6 py-4">Volunteer</th>
                 <th className="px-6 py-4">Task</th>
-                <th className="px-6 py-4 text-center">Match Score</th>
-                <th className="px-6 py-4">Assigned Time</th>
-                <th className="px-6 py-4 text-center">Feedback / Outcome</th>
+                <th className="px-6 py-4 text-center">Score</th>
+                <th className="px-6 py-4">Time</th>
+                <th className="px-6 py-4 text-center">Outcome</th>
               </tr>
             </thead>
-            <tbody className="divide-y divide-slate-100">
+            <tbody className="divide-y divide-[#e8dfcf]/50">
               {assignments.map((a) => (
-                <tr key={a.id} className="hover:bg-slate-50 transition-colors">
-                  <td className="px-6 py-4 font-bold text-slate-900">{a.volunteerName}</td>
+                <tr key={a.id} className="hover:bg-white/40 transition-colors">
+                  <td className="px-6 py-4 font-bold text-gray-800">{a.volunteerName}</td>
                   <td className="px-6 py-4 font-medium">{a.needTitle}</td>
                   <td className="px-6 py-4 text-center">
-                    <span className="inline-flex items-center justify-center px-2 py-1 rounded bg-blue-50 text-blue-700 font-bold text-xs">
+                    <span className="inline-flex items-center justify-center px-2.5 py-1 rounded-full bg-[#e9f5f3] text-[#2a9d8f] font-bold text-xs">
                       {a.matchScore}%
                     </span>
                   </td>
-                  <td className="px-6 py-4 text-xs whitespace-nowrap">{a.assignedAt}</td>
+                  <td className="px-6 py-4 text-xs text-gray-400 whitespace-nowrap">{a.assignedAt}</td>
                   <td className="px-6 py-4">
                     {a.outcome ? (
                       <div className="flex justify-center">
@@ -57,25 +57,13 @@ const AssignmentsList: React.FC<AssignmentsListProps> = ({ assignments, onRecord
                       </div>
                     ) : (
                       <div className="flex items-center justify-center gap-2">
-                        <button
-                          onClick={() => onRecordOutcome(a.id, 'excellent')}
-                          className="p-1.5 text-slate-400 hover:text-amber-500 hover:bg-amber-50 rounded-lg transition-colors border border-transparent hover:border-amber-200"
-                          title="Excellent"
-                        >
+                        <button onClick={() => onRecordOutcome(a.id, 'excellent')} className="p-1.5 text-gray-300 hover:text-[#f4a261] hover:bg-[#fef9f0] rounded-full transition-all duration-200 hover:scale-110" title="Excellent">
                           <Star size={16} />
                         </button>
-                        <button
-                          onClick={() => onRecordOutcome(a.id, 'completed')}
-                          className="p-1.5 text-slate-400 hover:text-emerald-500 hover:bg-emerald-50 rounded-lg transition-colors border border-transparent hover:border-emerald-200"
-                          title="Completed"
-                        >
+                        <button onClick={() => onRecordOutcome(a.id, 'completed')} className="p-1.5 text-gray-300 hover:text-[#2a9d8f] hover:bg-[#e9f5f3] rounded-full transition-all duration-200 hover:scale-110" title="Completed">
                           <CheckCircle2 size={16} />
                         </button>
-                        <button
-                          onClick={() => onRecordOutcome(a.id, 'no-show')}
-                          className="p-1.5 text-slate-400 hover:text-rose-500 hover:bg-rose-50 rounded-lg transition-colors border border-transparent hover:border-rose-200"
-                          title="No-Show"
-                        >
+                        <button onClick={() => onRecordOutcome(a.id, 'no-show')} className="p-1.5 text-gray-300 hover:text-[#e76f51] hover:bg-[#fef3f2] rounded-full transition-all duration-200 hover:scale-110" title="No-Show">
                           <XCircle size={16} />
                         </button>
                       </div>

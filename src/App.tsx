@@ -1,5 +1,4 @@
-import Header from './components/Header';
-import MetricCard from './components/MetricCard';
+import HeroDashboard from './components/HeroDashboard';
 import VolunteerCard from './components/VolunteerCard';
 import NeedCard from './components/NeedCard';
 import MatchCard from './components/MatchCard';
@@ -10,7 +9,7 @@ import InsightsPanel from './components/InsightsPanel';
 import DemoControls from './components/DemoControls';
 import ComparisonPanel from './components/ComparisonPanel';
 import AssignmentsList from './components/AssignmentsList';
-import MapView from './components/MapView'; // ✅ ADDED
+import MapView from './components/MapView';
 
 import { useVolunteerMatch } from './hooks/useVolunteerMatch';
 import { mockVolunteers, mockNeeds } from './data/mockData';
@@ -33,8 +32,6 @@ import {
   ClipboardCheck,
   AlertTriangle,
   Target,
-  Map as MapIcon, // ✅ icon
-  LayoutDashboard // ✅ icon
 } from 'lucide-react';
 
 import { useState } from 'react';
@@ -43,7 +40,7 @@ function App() {
   const [matchSort, setMatchSort] = useState<'score' | 'urgency' | 'skills'>('score');
   const [matchFilter, setMatchFilter] = useState<'all' | 'high_urgency' | 'high_score'>('all');
 
-  const [viewMode, setViewMode] = useState<'dashboard' | 'map'>('dashboard'); // ✅ ADDED
+  const [viewMode, setViewMode] = useState<'dashboard' | 'map'>('dashboard');
 
   const {
     volunteers,
@@ -105,43 +102,28 @@ function App() {
   };
 
   return (
-    <div className="min-h-screen bg-[#f8fafc] p-4 md:p-8">
-      <div className="max-w-7xl mx-auto">
+    <div className="min-h-screen p-4 md:p-6 lg:p-8">
+      {/* Glass Shell Container */}
+      <div className="glass-shell max-w-7xl mx-auto p-6 md:p-8">
 
-        <Header />
+        <HeroDashboard
+          volunteerCount={volunteers.length}
+          activeNeedsCount={activeNeeds.length}
+          assignmentCount={assignments.length}
+          coverageRate={coverageRate}
+          averageMatchScore={averageMatchScore}
+          viewMode={viewMode}
+          onViewModeChange={setViewMode}
+        />
 
-        {/* ✅ VIEW TOGGLE */}
-        <div className="flex gap-3 mb-6">
-          <button
-            onClick={() => setViewMode('dashboard')}
-            className={`flex items-center gap-2 px-4 py-2 rounded-lg text-sm font-semibold ${viewMode === 'dashboard'
-                ? 'bg-blue-600 text-white'
-                : 'bg-white border text-slate-600'
-              }`}
-          >
-            <LayoutDashboard size={16} />
-            Dashboard
-          </button>
-
-          <button
-            onClick={() => setViewMode('map')}
-            className={`flex items-center gap-2 px-4 py-2 rounded-lg text-sm font-semibold ${viewMode === 'map'
-                ? 'bg-blue-600 text-white'
-                : 'bg-white border text-slate-600'
-              }`}
-          >
-            <MapIcon size={16} />
-            Map View
-          </button>
-        </div>
-
-        {/* ✅ MAP VIEW */}
         {viewMode === 'map' ? (
-          <MapView
-            volunteers={volunteers}
-            needs={needs}
-            assignments={assignments}
-          />
+          <div className="warm-card !p-0 overflow-hidden">
+            <MapView
+              volunteers={volunteers}
+              needs={needs}
+              assignments={assignments}
+            />
+          </div>
         ) : (
           <>
             <DemoControls
@@ -152,10 +134,11 @@ function App() {
               isLoading={isLoading}
             />
 
-            <div className="flex flex-wrap items-center gap-4 mb-8 p-4 bg-white/70 rounded-2xl border shadow-sm">
+            {/* Import Data Bar */}
+            <div className="warm-card flex flex-wrap items-center gap-4 mb-8 p-5">
               <div className="flex items-center gap-2 mr-auto">
-                <Sparkles size={16} />
-                <span className="text-sm font-bold text-slate-700">
+                <Sparkles size={16} className="text-[#e76f51]" />
+                <span className="text-sm font-semibold text-gray-600">
                   Import Data
                 </span>
               </div>
@@ -164,16 +147,10 @@ function App() {
               <CsvUpload label="Upload Needs CSV" isLoading={isLoading} onFileSelect={handleNeedsCsvUpload} />
 
               {assignments.length > 0 && (
-                <button onClick={handleExport} className="px-4 py-2 bg-green-600 text-white rounded-lg">
+                <button onClick={handleExport} className="btn-coral">
                   Export ({assignments.length})
                 </button>
               )}
-            </div>
-
-            <div className="grid grid-cols-1 md:grid-cols-3 gap-6 mb-10">
-              <MetricCard title="Total Volunteers" value={volunteers.length} icon={<Users />} color="blue" />
-              <MetricCard title="Active Needs" value={activeNeeds.length} icon={<AlertTriangle />} color="rose" />
-              <MetricCard title="Assignments Made" value={assignments.length} icon={<ClipboardCheck />} color="emerald" />
             </div>
 
             <InsightsPanel
@@ -186,6 +163,67 @@ function App() {
             <AssignmentsList assignments={assignments} onRecordOutcome={handleRecordOutcome} />
 
             <ComparisonPanel />
+
+            {/* Matches + Volunteers + Needs */}
+            {topMatches.length > 0 && (
+              <div className="mb-10">
+                <h2 className="text-xl font-bold text-gray-800 tracking-tight mb-5">
+                  Top Matches
+                </h2>
+                <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+                  {topMatches.slice(0, 6).map((match, i) => (
+                    <MatchCard
+                      key={`${match.volunteer.id}-${match.need.id}`}
+                      match={match}
+                      onAssign={handleAssign}
+                      isTopMatch={i === 0}
+                    />
+                  ))}
+                </div>
+              </div>
+            )}
+
+            <div className="grid grid-cols-1 lg:grid-cols-2 gap-8 mb-10">
+              {/* Volunteers */}
+              <div>
+                <h2 className="text-xl font-bold text-gray-800 tracking-tight mb-5">
+                  Volunteers ({volunteers.length})
+                </h2>
+                {volunteers.length > 0 ? (
+                  <div className="flex flex-col gap-4">
+                    {volunteers.map((v) => {
+                      const hasMatches = topMatches.some(m => m.volunteer.id === v.id);
+                      return (
+                        <VolunteerCard
+                          key={v.id}
+                          volunteer={v}
+                          hasNoMatches={!hasMatches}
+                          unmatchedReasons={!hasMatches ? getUnmatchedReasons(v) : []}
+                        />
+                      );
+                    })}
+                  </div>
+                ) : (
+                  <EmptyState title="No Volunteers" description="Upload a CSV or load a demo scenario" />
+                )}
+              </div>
+
+              {/* Needs */}
+              <div>
+                <h2 className="text-xl font-bold text-gray-800 tracking-tight mb-5">
+                  Community Needs ({needs.length})
+                </h2>
+                {needs.length > 0 ? (
+                  <div className="flex flex-col gap-4">
+                    {needs.map((n) => (
+                      <NeedCard key={n.id} need={n} />
+                    ))}
+                  </div>
+                ) : (
+                  <EmptyState title="No Needs" description="Upload a CSV or load a demo scenario" />
+                )}
+              </div>
+            </div>
           </>
         )}
       </div>
@@ -193,9 +231,10 @@ function App() {
       <ToastContainer toasts={toasts} onDismiss={dismissToast} />
 
       {isLoading && (
-        <div className="fixed inset-0 flex items-center justify-center">
-          <div className="bg-white p-6 rounded-xl shadow">
-            Processing...
+        <div className="fixed inset-0 flex items-center justify-center bg-black/10 backdrop-blur-sm z-50">
+          <div className="glass-stat px-10 py-6 text-center">
+            <div className="w-8 h-8 mx-auto mb-3 border-3 border-gray-200 border-t-[#2a9d8f] rounded-full animate-spin" />
+            <p className="text-sm font-semibold text-gray-600">Processing…</p>
           </div>
         </div>
       )}

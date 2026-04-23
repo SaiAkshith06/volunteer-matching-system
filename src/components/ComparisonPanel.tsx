@@ -4,90 +4,68 @@ import { Clock, Cpu, ShieldCheck, TrendingUp, ArrowRight } from 'lucide-react';
 const ComparisonPanel: React.FC = () => {
   return (
     <div className="mb-10">
-      <div className="bg-gradient-to-br from-indigo-50 via-white to-violet-50 rounded-2xl border border-indigo-100 overflow-hidden shadow-sm">
+      <div className="warm-card overflow-hidden !p-0">
         {/* Header */}
-        <div className="px-6 py-4 bg-gradient-to-r from-indigo-600 to-violet-600">
-          <h3 className="text-sm font-bold text-white flex items-center gap-2">
+        <div className="px-7 py-5" style={{ background: 'linear-gradient(135deg, #2a9d8f, #21867a)' }}>
+          <h3 className="text-sm font-bold text-white flex items-center gap-2 tracking-tight">
             <TrendingUp size={16} />
             Why Smart Matching?
           </h3>
-          <p className="text-[11px] text-indigo-200 mt-0.5">
-            See how our AI-powered system compares to manual volunteer coordination
+          <p className="text-[11px] text-white/60 mt-0.5">
+            AI-powered system vs manual volunteer coordination
           </p>
         </div>
 
-        {/* Comparison Grid */}
-        <div className="grid grid-cols-1 md:grid-cols-2 divide-y md:divide-y-0 md:divide-x divide-indigo-100">
-          {/* Manual Side */}
-          <div className="p-6">
-            <div className="flex items-center gap-2 mb-4">
-              <span className="text-xs font-bold text-slate-400 uppercase tracking-wider bg-slate-100 px-2 py-1 rounded">
-                Manual Process
-              </span>
-            </div>
-            <ul className="space-y-3">
-              <li className="flex items-start gap-2.5">
-                <Clock size={14} className="text-slate-400 mt-0.5 shrink-0" />
-                <div>
-                  <p className="text-xs font-bold text-slate-700">3–4 hours per cycle</p>
-                  <p className="text-[10px] text-slate-400">Reviewing spreadsheets row by row</p>
-                </div>
-              </li>
-              <li className="flex items-start gap-2.5">
-                <ShieldCheck size={14} className="text-slate-400 mt-0.5 shrink-0" />
-                <div>
-                  <p className="text-xs font-bold text-slate-700">Error-prone matching</p>
-                  <p className="text-[10px] text-slate-400">Skills often overlooked or mismapped</p>
-                </div>
-              </li>
-              <li className="flex items-start gap-2.5">
-                <TrendingUp size={14} className="text-slate-400 mt-0.5 shrink-0" />
-                <div>
-                  <p className="text-xs font-bold text-slate-700">Low coverage (~40%)</p>
-                  <p className="text-[10px] text-slate-400">Many needs go unfilled</p>
-                </div>
-              </li>
+        <div className="grid grid-cols-1 md:grid-cols-2 divide-y md:divide-y-0 md:divide-x divide-[#e8dfcf]/50">
+          {/* Manual */}
+          <div className="p-7">
+            <span className="text-xs font-bold text-gray-400 uppercase tracking-wider bg-gray-100 px-3 py-1 rounded-full mb-5 inline-block">
+              Manual Process
+            </span>
+            <ul className="space-y-4">
+              {[
+                { icon: Clock, title: '3–4 hours per cycle', desc: 'Reviewing spreadsheets row by row' },
+                { icon: ShieldCheck, title: 'Error-prone matching', desc: 'Skills often overlooked' },
+                { icon: TrendingUp, title: 'Low coverage (~40%)', desc: 'Many needs go unfilled' },
+              ].map((item) => (
+                <li key={item.title} className="flex items-start gap-3">
+                  <item.icon size={14} className="text-gray-300 mt-0.5 shrink-0" />
+                  <div>
+                    <p className="text-xs font-bold text-gray-700">{item.title}</p>
+                    <p className="text-[10px] text-gray-400">{item.desc}</p>
+                  </div>
+                </li>
+              ))}
             </ul>
           </div>
 
-          {/* Smart System Side */}
-          <div className="p-6 bg-white/50">
-            <div className="flex items-center gap-2 mb-4">
-              <span className="text-xs font-bold text-emerald-600 uppercase tracking-wider bg-emerald-50 px-2 py-1 rounded border border-emerald-200">
-                Smart System
-              </span>
-            </div>
-            <ul className="space-y-3">
-              <li className="flex items-start gap-2.5">
-                <Cpu size={14} className="text-emerald-500 mt-0.5 shrink-0" />
-                <div>
-                  <p className="text-xs font-bold text-slate-700">Under 5 seconds</p>
-                  <p className="text-[10px] text-emerald-600">6-factor scoring in real time</p>
-                </div>
-              </li>
-              <li className="flex items-start gap-2.5">
-                <ShieldCheck size={14} className="text-emerald-500 mt-0.5 shrink-0" />
-                <div>
-                  <p className="text-xs font-bold text-slate-700">Data-driven decisions</p>
-                  <p className="text-[10px] text-emerald-600">Explainable confidence scores</p>
-                </div>
-              </li>
-              <li className="flex items-start gap-2.5">
-                <TrendingUp size={14} className="text-emerald-500 mt-0.5 shrink-0" />
-                <div>
-                  <p className="text-xs font-bold text-slate-700">85%+ coverage</p>
-                  <p className="text-[10px] text-emerald-600">Auto-assign fills critical gaps</p>
-                </div>
-              </li>
+          {/* Smart */}
+          <div className="p-7 bg-[#e9f5f3]/20">
+            <span className="text-xs font-bold text-[#2a9d8f] uppercase tracking-wider bg-[#e9f5f3] px-3 py-1 rounded-full mb-5 inline-block">
+              Smart System
+            </span>
+            <ul className="space-y-4">
+              {[
+                { icon: Cpu, title: 'Under 5 seconds', desc: '6-factor scoring in real time' },
+                { icon: ShieldCheck, title: 'Data-driven decisions', desc: 'Explainable confidence scores' },
+                { icon: TrendingUp, title: '85%+ coverage', desc: 'Auto-assign fills critical gaps' },
+              ].map((item) => (
+                <li key={item.title} className="flex items-start gap-3">
+                  <item.icon size={14} className="text-[#2a9d8f] mt-0.5 shrink-0" />
+                  <div>
+                    <p className="text-xs font-bold text-gray-700">{item.title}</p>
+                    <p className="text-[10px] text-[#2a9d8f]">{item.desc}</p>
+                  </div>
+                </li>
+              ))}
             </ul>
           </div>
         </div>
 
-        {/* Bottom CTA */}
-        <div className="px-6 py-3 bg-indigo-50 flex items-center justify-center gap-2 text-[11px] font-semibold text-indigo-600">
-          <span>Manual coordination</span>
+        <div className="px-7 py-3.5 bg-[#e9f5f3]/30 flex items-center justify-center gap-2 text-[11px] font-semibold text-[#2a9d8f]">
+          <span className="text-gray-500">Manual coordination</span>
           <ArrowRight size={12} />
-          <span className="text-indigo-800">Intelligent automation</span>
+          <span className="font-bold">Intelligent automation</span>
         </div>
       </div>
     </div>

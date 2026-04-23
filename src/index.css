@@ -1,62 +1,154 @@
+@import url('https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800;900&display=swap');
+
 @tailwind base;
 @tailwind components;
 @tailwind utilities;
 
 @layer base {
   body {
-    @apply bg-[#f8fafc] text-slate-800 antialiased;
+    font-family: 'Inter', 'SF Pro Display', system-ui, -apple-system, sans-serif;
+    color: #374151;
+    -webkit-font-smoothing: antialiased;
+    -moz-osx-font-smoothing: grayscale;
+    min-height: 100vh;
+    background: linear-gradient(135deg, #f5efe6 0%, #efe6d8 50%, #e6dcc8 100%);
+    background-attachment: fixed;
+  }
+
+  /* Subtle grain texture overlay */
+  body::before {
+    content: '';
+    position: fixed;
+    inset: 0;
+    z-index: 0;
+    pointer-events: none;
+    background-image: radial-gradient(circle at 1px 1px, rgba(0,0,0,0.03) 1px, transparent 0);
+    background-size: 24px 24px;
+  }
+
+  #root {
+    position: relative;
+    z-index: 1;
   }
 }
 
-/* Toast slide-in animation */
+/* ─── Design System Utilities ─────────────────────────────────────── */
+
+@layer components {
+  /* Main glass container */
+  .glass-shell {
+    background: rgba(255, 255, 255, 0.40);
+    backdrop-filter: blur(24px);
+    -webkit-backdrop-filter: blur(24px);
+    border: 1px solid rgba(255, 255, 255, 0.20);
+    border-radius: 32px;
+    box-shadow: 0 20px 60px rgba(0, 0, 0, 0.08);
+  }
+
+  /* Standard warm card */
+  .warm-card {
+    background: rgba(248, 244, 236, 0.80);
+    backdrop-filter: blur(12px);
+    -webkit-backdrop-filter: blur(12px);
+    border: 1px solid #e8dfcf;
+    border-radius: 24px;
+    box-shadow: 0 10px 30px rgba(0, 0, 0, 0.06);
+    transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
+  }
+  .warm-card:hover {
+    box-shadow: 0 20px 50px rgba(0, 0, 0, 0.10);
+    transform: scale(1.015);
+  }
+
+  /* Glass stat card (for hero metrics) */
+  .glass-stat {
+    background: rgba(255, 255, 255, 0.55);
+    backdrop-filter: blur(16px);
+    -webkit-backdrop-filter: blur(16px);
+    border: 1px solid rgba(255, 255, 255, 0.30);
+    border-radius: 20px;
+    box-shadow: 0 8px 24px rgba(0, 0, 0, 0.05);
+    transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
+  }
+  .glass-stat:hover {
+    box-shadow: 0 12px 36px rgba(0, 0, 0, 0.08);
+    transform: translateY(-2px);
+  }
+
+  /* Coral primary button */
+  .btn-coral {
+    @apply px-6 py-2.5 text-sm font-semibold text-white rounded-full;
+    @apply transition-all duration-200;
+    @apply active:scale-95;
+    background: #e76f51;
+    box-shadow: 0 8px 24px rgba(231, 111, 81, 0.35);
+  }
+  .btn-coral:hover {
+    background: #d4603f;
+    box-shadow: 0 12px 32px rgba(231, 111, 81, 0.45);
+    transform: scale(1.05);
+  }
+
+  /* Teal secondary button */
+  .btn-teal {
+    @apply px-6 py-3 text-sm font-semibold text-white rounded-full;
+    @apply transition-all duration-200;
+    @apply active:scale-95;
+    background: #2a9d8f;
+    box-shadow: 0 10px 30px rgba(42, 157, 143, 0.35);
+  }
+  .btn-teal:hover {
+    background: #21867a;
+    box-shadow: 0 14px 40px rgba(42, 157, 143, 0.45);
+    transform: scale(1.05);
+  }
+
+  /* Soft pill button */
+  .btn-soft {
+    @apply px-5 py-2.5 text-sm font-medium rounded-full;
+    @apply transition-all duration-200;
+    @apply active:scale-95;
+    background: rgba(255, 255, 255, 0.60);
+    color: #6b7280;
+    box-shadow: inset 0 2px 4px rgba(0,0,0,0.04);
+  }
+  .btn-soft:hover {
+    background: rgba(255, 255, 255, 0.85);
+    box-shadow: 0 4px 12px rgba(0,0,0,0.06);
+    transform: scale(1.05);
+  }
+}
+
+/* ─── Animations ──────────────────────────────────────────────────── */
+
 @keyframes slide-in {
-  from {
-    opacity: 0;
-    transform: translateX(100%) scale(0.95);
-  }
-  to {
-    opacity: 1;
-    transform: translateX(0) scale(1);
-  }
+  from { opacity: 0; transform: translateX(100%) scale(0.95); }
+  to { opacity: 1; transform: translateX(0) scale(1); }
 }
-
 .animate-slide-in {
   animation: slide-in 0.3s cubic-bezier(0.16, 1, 0.3, 1) forwards;
 }
 
-/* Subtle pulse for loading states */
-@keyframes gentle-pulse {
-  0%,
-  100% {
-    opacity: 1;
-  }
-  50% {
-    opacity: 0.6;
-  }
+@keyframes fadeIn {
+  from { opacity: 0; transform: translateY(-4px); }
+  to { opacity: 1; transform: translateY(0); }
+}
+.animate-fadeIn {
+  animation: fadeIn 0.25s ease-out forwards;
 }
 
+@keyframes gentle-pulse {
+  0%, 100% { opacity: 1; }
+  50% { opacity: 0.6; }
+}
 .animate-gentle-pulse {
   animation: gentle-pulse 1.5s ease-in-out infinite;
 }
 
-/* Fade-in for expandable sections */
-@keyframes fadeIn {
-  from {
-    opacity: 0;
-    transform: translateY(-4px);
-  }
-  to {
-    opacity: 1;
-    transform: translateY(0);
-  }
+@keyframes float {
+  0%, 100% { transform: translateY(0px); }
+  50% { transform: translateY(-4px); }
 }
-
-.animate-fadeIn {
-  animation: fadeIn 0.2s ease-out forwards;
-}
-
-@keyframes shimmer {
-  100% {
-    transform: translateX(100%);
-  }
+.animate-float {
+  animation: float 3s ease-in-out infinite;
 }

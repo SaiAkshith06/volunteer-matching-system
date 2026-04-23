@@ -8,21 +8,12 @@ interface ToastContainerProps {
 }
 
 const iconMap = {
-  success: <CheckCircle size={16} className="text-emerald-500 shrink-0" />,
-  error: <AlertTriangle size={16} className="text-rose-500 shrink-0" />,
-  info: <Info size={16} className="text-blue-500 shrink-0" />,
+  success: <CheckCircle size={16} className="text-[#2a9d8f] shrink-0" />,
+  error: <AlertTriangle size={16} className="text-[#e76f51] shrink-0" />,
+  info: <Info size={16} className="text-[#f4a261] shrink-0" />,
 };
 
-const bgMap = {
-  success: 'bg-emerald-50 border-emerald-200',
-  error: 'bg-rose-50 border-rose-200',
-  info: 'bg-blue-50 border-blue-200',
-};
-
-const ToastContainer: React.FC<ToastContainerProps> = ({
-  toasts,
-  onDismiss,
-}) => {
+const ToastContainer: React.FC<ToastContainerProps> = ({ toasts, onDismiss }) => {
   if (toasts.length === 0) return null;
 
   return (
@@ -30,15 +21,13 @@ const ToastContainer: React.FC<ToastContainerProps> = ({
       {toasts.map((toast) => (
         <div
           key={toast.id}
-          className={`flex items-start gap-3 p-4 rounded-xl border shadow-lg backdrop-blur-sm animate-slide-in ${bgMap[toast.type]}`}
+          className="warm-card !hover:scale-100 flex items-start gap-3 p-4 animate-slide-in"
         >
           {iconMap[toast.type]}
-          <p className="text-sm font-medium text-slate-800 flex-1 leading-snug">
-            {toast.message}
-          </p>
+          <p className="text-sm font-medium text-gray-700 flex-1 leading-snug">{toast.message}</p>
           <button
             onClick={() => onDismiss(toast.id)}
-            className="text-slate-400 hover:text-slate-600 transition-colors shrink-0"
+            className="text-gray-400 hover:text-gray-600 transition-colors shrink-0"
             aria-label="Dismiss notification"
           >
             <X size={14} />
