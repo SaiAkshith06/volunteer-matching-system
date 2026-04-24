@@ -47,15 +47,28 @@ const NeedCard: React.FC<NeedCardProps> = ({ need }) => {
             <span className="text-[11px] truncate">{need.timeframe || `${need.timeframeStart} - ${need.timeframeEnd}`}</span>
           </div>
         )}
-        {need.deadline && (
-          <div className="flex items-center gap-1.5 text-[#e76f51]">
-            <span className="font-bold text-[10px]">DUE</span>
-            <span className="text-[11px]">{new Date(need.deadline).toLocaleDateString()}</span>
+        {need.deadline && (() => {
+          const isOverdue = new Date(need.deadline).getTime() < Date.now();
+          return (
+            <div className="flex items-center gap-1.5 text-[#e76f51]">
+              <span className="font-bold text-[10px]">{isOverdue ? "OVERDUE" : "DUE"}</span>
+              <span className="text-[11px]">
+                {isOverdue ? "Overdue — immediate action required" : new Date(need.deadline).toLocaleDateString()}
+              </span>
+            </div>
+          );
+        })()}
+        <div className="flex flex-col gap-1.5 text-gray-400 mt-2">
+          <div className="flex items-center gap-1.5">
+            <span className="font-bold text-[10px]">TEAM</span>
+            <span className="text-[11px]">{need.assignedCount || 0} / {need.teamSizeNeeded || 1} volunteers</span>
           </div>
-        )}
-        <div className="flex items-center gap-1.5 text-gray-400">
-          <span className="font-bold text-[10px]">TEAM</span>
-          <span className="text-[11px]">{need.assignedCount || 0} / {need.teamSizeNeeded || 1} volunteers</span>
+          <div className="h-1.5 w-full bg-gray-200 rounded-full overflow-hidden">
+            <div 
+              className="h-full bg-[#2a9d8f] transition-all duration-300"
+              style={{ width: `${Math.min(100, ((need.assignedCount || 0) / (need.teamSizeNeeded || 1)) * 100)}%` }}
+            />
+          </div>
         </div>
       </div>
     </div>

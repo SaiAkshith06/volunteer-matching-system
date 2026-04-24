@@ -16,7 +16,7 @@ const ComparisonPanel: React.FC = () => {
                 Why Smart Matching?
               </h3>
               <p className="text-xs text-slate-500 font-medium mt-1">
-                AI-powered system vs manual volunteer coordination
+                Estimated time savings based on NGO workflow analysis
               </p>
             </div>
           </div>
@@ -41,9 +41,9 @@ const ComparisonPanel: React.FC = () => {
 
             <ul className="space-y-5 relative cursor-default">
               {[
-                { icon: Clock, title: '3–4 hours per cycle', desc: 'Reviewing spreadsheets row by row' },
+                { icon: Clock, title: 'Time-consuming cycles', desc: 'Reviewing spreadsheets row by row' },
                 { icon: ShieldCheck, title: 'Error-prone matching', desc: 'Skills often overlooked' },
-                { icon: TrendingUp, title: 'Low coverage (~40%)', desc: 'Many needs go unfilled' },
+                { icon: TrendingUp, title: 'Limited coverage', desc: 'Many needs go unfilled' },
               ].map((item) => (
                 <li key={item.title} className="flex items-start gap-4 group">
                   <div className="w-8 h-8 rounded-full bg-slate-100 flex items-center justify-center shrink-0 border border-slate-200/50 transition-colors group-hover:bg-slate-200 group-hover:border-slate-300 transition-all duration-300">
@@ -76,9 +76,9 @@ const ComparisonPanel: React.FC = () => {
 
             <ul className="space-y-5 relative cursor-default">
               {[
-                { icon: Cpu, title: 'Under 5 seconds', desc: '6-factor scoring in real time' },
+                { icon: Cpu, title: 'Real-time processing', desc: '6-factor scoring' },
                 { icon: ShieldCheck, title: 'Data-driven decisions', desc: 'Explainable confidence scores' },
-                { icon: TrendingUp, title: '85%+ coverage', desc: 'Auto-assign fills critical gaps' },
+                { icon: TrendingUp, title: 'Maximized coverage', desc: 'Auto-assign fills critical gaps' },
               ].map((item) => (
                 <li key={item.title} className="flex items-start gap-4 group">
                   <div className="w-8 h-8 rounded-full bg-white flex items-center justify-center shrink-0 border border-[#2a9d8f]/20 shadow-[0_2px_8px_rgba(42,157,143,0.08)] transition-all duration-300 group-hover:scale-110 group-hover:shadow-[0_4px_12px_rgba(42,157,143,0.15)] group-hover:border-[#2a9d8f]/40">

@@ -25,13 +25,7 @@ import {
 } from './data/demoScenarios';
 
 import {
-  Users,
-  Heart,
   Sparkles,
-  Download,
-  ClipboardCheck,
-  AlertTriangle,
-  Target,
 } from 'lucide-react';
 
 import { useState } from 'react';
@@ -160,28 +154,74 @@ function App() {
               averageMatchScore={averageMatchScore}
             />
 
-            <AssignmentsList assignments={assignments} onRecordOutcome={handleRecordOutcome} />
+            <div className="max-h-64 overflow-y-auto mb-8 rounded-lg border border-gray-100 shadow-sm">
+              <AssignmentsList assignments={assignments} onRecordOutcome={handleRecordOutcome} />
+            </div>
 
             <ComparisonPanel />
 
             {/* Matches + Volunteers + Needs */}
-            {topMatches.length > 0 && (
-              <div className="mb-10">
-                <h2 className="text-xl font-bold text-gray-800 tracking-tight mb-5">
-                  Top Matches
-                </h2>
-                <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
-                  {topMatches.slice(0, 6).map((match, i) => (
-                    <MatchCard
-                      key={`${match.volunteer.id}-${match.need.id}`}
-                      match={match}
-                      onAssign={handleAssign}
-                      isTopMatch={i === 0}
-                    />
-                  ))}
+            {topMatches.length > 0 && (() => {
+              let processedMatches = [...topMatches];
+              
+              if (matchFilter === 'high_urgency') {
+                processedMatches = processedMatches.filter(m => m.need.urgency === 'High');
+              } else if (matchFilter === 'high_score') {
+                processedMatches = processedMatches.filter(m => m.score > 80);
+              }
+
+              processedMatches.sort((a, b) => {
+                if (matchSort === 'score') return b.score - a.score;
+                if (matchSort === 'skills') return b.breakdown.skills - a.breakdown.skills;
+                if (matchSort === 'urgency') {
+                  const uMap = { High: 3, Medium: 2, Low: 1 };
+                  const uA = uMap[a.need.urgency] || 0;
+                  const uB = uMap[b.need.urgency] || 0;
+                  return uB - uA;
+                }
+                return 0;
+              });
+
+              return (
+                <div className="mb-10">
+                  <div className="flex flex-col sm:flex-row sm:justify-between sm:items-end mb-5 gap-4">
+                    <h2 className="text-xl font-bold text-gray-800 tracking-tight">
+                      Top Matches
+                    </h2>
+                    <div className="flex gap-4">
+                      <select 
+                        className="bg-white/70 border border-white/40 text-gray-700 text-sm py-1.5 px-3 rounded shadow-sm focus:outline-none focus:ring-2 focus:ring-[#2a9d8f]"
+                        value={matchSort}
+                        onChange={e => setMatchSort(e.target.value as any)}
+                      >
+                        <option value="score">Sort: Score</option>
+                        <option value="urgency">Sort: Urgency</option>
+                        <option value="skills">Sort: Skills</option>
+                      </select>
+                      <select 
+                        className="bg-white/70 border border-white/40 text-gray-700 text-sm py-1.5 px-3 rounded shadow-sm focus:outline-none focus:ring-2 focus:ring-[#2a9d8f]"
+                        value={matchFilter}
+                        onChange={e => setMatchFilter(e.target.value as any)}
+                      >
+                        <option value="all">Filter: All</option>
+                        <option value="high_urgency">Filter: High Urgency</option>
+                        <option value="high_score">Filter: High Score (>80)</option>
+                      </select>
+                    </div>
+                  </div>
+                  <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+                    {processedMatches.slice(0, 12).map((match, i) => (
+                      <MatchCard
+                        key={`${match.volunteer.id}-${match.need.id}`}
+                        match={match}
+                        onAssign={handleAssign}
+                        isTopMatch={i === 0}
+                      />
+                    ))}
+                  </div>
                 </div>
-              </div>
-            )}
+              );
+            })()}
 
             <div className="grid grid-cols-1 lg:grid-cols-2 gap-8 mb-10">
               {/* Volunteers */}

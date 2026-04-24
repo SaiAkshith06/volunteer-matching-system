@@ -31,6 +31,7 @@ import {
   MAX_ACTIVE_TASKS,
   MAX_PROFICIENCY,
   PARTIAL_OVERLAP_GROUPS,
+  normalizeWeights,
 } from '../config/matchingConfig';
 
 import type { ScoringWeights } from '../config/matchingConfig';
@@ -431,14 +432,16 @@ function scoreMatch(
   const workload = workloadScore(volunteer.activeTaskCount);
   const reliability = reliabilityScore(volunteer);
 
+  const normWeights = normalizeWeights(weights);
+
   const rawScore =
-    skills * weights.skills +
-    location * weights.location +
-    availability * weights.availability +
-    urgency * weights.urgency +
-    rating * weights.rating +
-    workload * weights.workload +
-    reliability * weights.reliability;
+    skills * normWeights.skills +
+    location * normWeights.location +
+    availability * normWeights.availability +
+    urgency * normWeights.urgency +
+    rating * normWeights.rating +
+    workload * normWeights.workload +
+    reliability * normWeights.reliability;
 
   const score = Math.max(0, Math.min(100, Math.round(rawScore * 100)));
 

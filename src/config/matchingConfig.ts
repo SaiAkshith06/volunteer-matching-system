@@ -20,25 +20,38 @@ export interface ScoringWeights {
 
 /** Default balanced weights */
 export const DEFAULT_WEIGHTS: ScoringWeights = {
-  skills: 0.30,
-  location: 0.20,
-  availability: 0.15,
-  urgency: 0.10,
-  rating: 0.10,
-  workload: 0.05,
-  reliability: 0.10,
+  skills: 30,
+  location: 20,
+  availability: 15,
+  urgency: 10,
+  rating: 10,
+  workload: 5,
+  reliability: 10,
 };
 
 /** Emergency-biased weights — prioritise urgency and skills */
 export const EMERGENCY_WEIGHTS: ScoringWeights = {
-  skills: 0.35,
-  location: 0.15,
-  availability: 0.10,
-  urgency: 0.20,
-  rating: 0.05,
-  workload: 0.05,
-  reliability: 0.10,
+  skills: 35,
+  location: 15,
+  availability: 10,
+  urgency: 20,
+  rating: 5,
+  workload: 5,
+  reliability: 10,
 };
+
+export function normalizeWeights(weights: ScoringWeights): ScoringWeights {
+  const total = Object.values(weights).reduce((a, b) => a + b, 0);
+  return {
+    skills: weights.skills / total,
+    location: weights.location / total,
+    availability: weights.availability / total,
+    urgency: weights.urgency / total,
+    rating: weights.rating / total,
+    workload: weights.workload / total,
+    reliability: weights.reliability / total,
+  };
+}
 
 // ─── Skill Priority Map ─────────────────────────────────────────────────────
 // Reflects real-world scarcity: healthcare > logistics > general
