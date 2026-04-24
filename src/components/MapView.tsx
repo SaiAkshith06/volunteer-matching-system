@@ -1,6 +1,6 @@
 import { useState, useMemo } from "react";
 import { GoogleMap, useJsApiLoader, Marker, Polyline, InfoWindow, MarkerClusterer } from "@react-google-maps/api";
-import { Volunteer, Need, Assignment } from "../types";
+import type { Volunteer, Need, Assignment } from "../types";
 
 const containerStyle = {
     width: "100%",
