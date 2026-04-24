@@ -205,7 +205,7 @@ function App() {
                       >
                         <option value="all">Filter: All</option>
                         <option value="high_urgency">Filter: High Urgency</option>
-                        <option value="high_score">Filter: High Score (>80)</option>
+                        <option value="high_score">Filter: High Score ({'>'}80)</option>
                       </select>
                     </div>
                   </div>
