@@ -33,9 +33,9 @@ export default function MapView({ volunteers, needs, assignments }: MapViewProps
 
     // 🔵 Dynamic center (first available point)
     const center = useMemo(() => validVolunteers[0]
-        ? { lat: validVolunteers[0].lat, lng: validVolunteers[0].lng }
+        ? { lat: validVolunteers[0].lat!, lng: validVolunteers[0].lng! }
         : validNeeds[0]
-            ? { lat: validNeeds[0].lat, lng: validNeeds[0].lng }
+            ? { lat: validNeeds[0].lat!, lng: validNeeds[0].lng! }
             : DEFAULT_CENTER, [validVolunteers, validNeeds]);
 
     // 🔴 Handle missing API key
@@ -78,9 +78,7 @@ export default function MapView({ volunteers, needs, assignments }: MapViewProps
             zoom={11}
             onClick={() => setActiveMarker(null)}
         >
-            <MarkerClusterer options={{
-                imagePath: 'https://developers.google.com/maps/documentation/javascript/examples/markerclusterer/m',
-            }}>
+            <MarkerClusterer>
                 {(clusterer) => (
                     <>
                         {/* 🔵 Volunteers (Blue markers) */}
@@ -138,14 +136,14 @@ export default function MapView({ volunteers, needs, assignments }: MapViewProps
                 const vol = volunteers.find(v => v.id === a.volunteerId);
                 const need = needs.find(n => n.id === a.needId);
 
-                if (!vol?.lat || !need?.lat) return null;
+                if (!vol?.lat || !vol?.lng || !need?.lat || !need?.lng) return null;
 
                 return (
                     <Polyline
                         key={a.id}
                         path={[
-                            { lat: vol.lat, lng: vol.lng },
-                            { lat: need.lat, lng: need.lng },
+                            { lat: vol.lat!, lng: vol.lng! },
+                            { lat: need.lat!, lng: need.lng! },
                         ]}
                         options={{
                             strokeColor: "#2a9d8f",

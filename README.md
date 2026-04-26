@@ -64,5 +64,13 @@ The dashboard comes with pre-loaded, realistic data sets to test the system with
 - **Education Scenario:** Tutoring and IT setup requirements across university campuses and suburban areas.
 - **Medical Emergency Scenario:** Critical first-aid and hospital support needs spanning city clinics.
 
-## Screenshots / GIF
-*(Include screenshots or GIFs of the interactive map, the matching cards, and CSV upload features here)*
+## Screenshots
+
+### Dashboard
+![Dashboard](screenshots/dashboard.png)
+
+### Map View
+![Map View](screenshots/map-view.png)
+
+### Matching System
+![Matching System](screenshots/matching-system.png)

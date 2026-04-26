@@ -154,9 +154,14 @@ function App() {
               averageMatchScore={averageMatchScore}
             />
 
-            <div className="max-h-64 overflow-y-auto mb-8 rounded-lg border border-gray-100 shadow-sm">
-              <AssignmentsList assignments={assignments} onRecordOutcome={handleRecordOutcome} />
-            </div>
+            {assignments.length > 0 && (
+              <div className="max-h-64 overflow-y-auto mb-8 rounded-lg border border-gray-100 shadow-sm">
+                <AssignmentsList
+                  assignments={assignments}
+                  onRecordOutcome={handleRecordOutcome}
+                />
+              </div>
+            )}
 
             <ComparisonPanel />
 

@@ -9,7 +9,6 @@ import {
   Clock,
   LayoutDashboard,
   Map as MapIcon,
-  Zap,
 } from 'lucide-react';
 
 interface HeroDashboardProps {

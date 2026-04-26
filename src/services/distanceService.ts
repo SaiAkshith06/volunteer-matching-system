@@ -10,7 +10,7 @@
  *   2. Otherwise → fall back to text-based word overlap.
  */
 
-import { MAX_DISTANCE_KM, EARTH_RADIUS_KM } from '../config/matchingConfig';
+import { EARTH_RADIUS_KM } from '../config/matchingConfig';
 
 // ─── Haversine Distance ─────────────────────────────────────────────────────
 

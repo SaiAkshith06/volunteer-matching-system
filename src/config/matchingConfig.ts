@@ -31,13 +31,13 @@ export const DEFAULT_WEIGHTS: ScoringWeights = {
 
 /** Emergency-biased weights — prioritise urgency and skills */
 export const EMERGENCY_WEIGHTS: ScoringWeights = {
-  skills: 35,
-  location: 15,
-  availability: 10,
-  urgency: 20,
-  rating: 5,
-  workload: 5,
-  reliability: 10,
+  skills: 0.35,
+  location: 0.15,
+  availability: 0.10,
+  urgency: 0.20,
+  rating: 0.05,
+  workload: 0.05,
+  reliability: 0.10,
 };
 
 export function normalizeWeights(weights: ScoringWeights): ScoringWeights {

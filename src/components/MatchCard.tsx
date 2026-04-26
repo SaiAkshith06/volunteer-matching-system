@@ -28,12 +28,8 @@ const urgencyColors: Record<Urgency, string> = {
   Low: 'text-[#2a9d8f] bg-[#e9f5f3]',
 };
 
-function getScoreGradient(score: number): string {
-  if (score >= 90) return 'from-[#2a9d8f] to-[#3ec4b3]';
-  if (score >= 75) return 'from-[#2a9d8f] to-[#4aaf9e]';
-  if (score >= 60) return 'from-[#f4a261] to-[#f4c792]';
-  return 'from-gray-400 to-gray-300';
-}
+
+
 
 function getConfidenceBadge(conf: 'High' | 'Medium' | 'Low'): string {
   switch (conf) {
